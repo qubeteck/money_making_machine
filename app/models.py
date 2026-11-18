@@ -24,7 +24,7 @@ def as_utc(value: datetime | None) -> datetime | None:
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(120), unique=True, index=True)
     email: Mapped[str | None] = mapped_column(String(254), unique=True, index=True, nullable=True)
     hashed_password: Mapped[str] = mapped_column(String(256))
@@ -40,7 +40,7 @@ class User(Base):
 class BotSetting(Base):
     __tablename__ = "bot_settings"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     symbols: Mapped[str] = mapped_column(String(500), default="BTC/USDT:USDT,ETH/USDT:USDT,SOL/USDT:USDT")

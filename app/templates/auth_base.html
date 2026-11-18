@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>{% block title %}Money Machine{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: { 950: "#070b12", 900: "#0b1019", 800: "#121a26" },
+            brand: { 300: "#6ee7b7", 400: "#34d399", 500: "#10b981", 600: "#059669" }
+          },
+          fontFamily: {
+            sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+            mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/static/styles.css">
+  {% block head %}{% endblock %}
+  <link rel="icon" type="image/png" href="/static/favicon.ico">
+  <link rel="shortcut icon" type="image/ico" href="/static/favicon.ico">
+</head>
+<body class="min-h-screen font-sans text-slate-200 antialiased bg-ink-950">
+<div class="min-h-screen flex items-center justify-center px-4 py-12">
+  {% block content %}{% endblock %}
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>
