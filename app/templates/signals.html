@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Signals{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Confluence feed</div>
+    <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Signals</h1>
+    <p class="mt-1 text-sm text-slate-500">Score breakdowns for every qualified setup, and the exact blocker otherwise.</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <span class="badge badge-slate">{{ signal_rows|length }} recent</span>
+    <span class="badge badge-green">min {{ settings.min_score|round|int }}/100</span>
+  </div>
+</div>
+
+<div class="panel overflow-hidden">
+  <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3.5">
+    <div>
+      <h2 class="text-sm font-semibold text-white">Signal log</h2>
+      <p class="mt-0.5 text-[11px] text-slate-500">Executed, rejected and below-threshold decisions are all recorded.</p>
+    </div>
+    <span class="badge badge-slate">latest 50</span>
+  </div>
+
+  {% if signal_rows %}
+  <div class="divide-y divide-slate-800/60">
+    {% for row in signal_rows %}
+    {% set signal = row.signal %}
+    <div class="px-4 py-4">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="badge {{ 'badge-green' if signal.side == 'long' else 'badge-red' }}">{{ signal.side }}</span>
+            <span class="text-base font-bold text-white">{{ signal.symbol|symbol }}</span>
+            <span class="badge {{ 'badge-green' if signal.status == 'executed' else ('badge-red' if signal.status in ['rejected','error'] else 'badge-slate') }}">{{ signal.status }}</span>
+            <span class="text-[11px] text-slate-500">{{ signal.created_at|dt }}</span>
+          </div>
+          <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs">
+            <span class="text-slate-500">Entry <span class="num text-slate-200">{{ signal.entry|price }}</span></span>
+            <span class="text-slate-500">Stop <span class="num text-rose-300">{{ signal.stop|price }}</span></span>
+            <span class="text-slate-500">Target <span class="num text-emerald-300">{{ signal.take_profit|price }}</span></span>
+            <span class="text-slate-500">R:R <span class="num text-slate-200">{{ '%.1f'|format(signal.rr) }}R</span></span>
+          </div>
+          {% if signal.reject_reason %}
+          <p class="mt-2 text-[11px] text-amber-300/80">Blocker: {{ signal.reject_reason }}</p>
+          {% endif %}
+        </div>
+        <div class="w-full shrink-0 lg:w-52">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-500">Confluence</span>
+            <span class="num font-bold {{ 'text-emerald-300' if signal.score >= settings.min_score else 'text-slate-400' }}">{{ signal.score|round|int }}/100</span>
+          </div>
+          <div class="score-bar mt-1.5"><span style="width: {{ signal.score }}%"></span></div>
+          <div class="mt-2 flex flex-wrap gap-1">
+            {% for name, points in row.components.items() %}
+            {% if points > 0 %}
+            <span class="rounded bg-slate-800/70 px-1.5 py-0.5 text-[10px] text-slate-400">{{ name }} +{{ points }}</span>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      {% if row.reasons %}
+      <details class="mt-3">
+        <summary class="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-300/80 hover:text-brand-200">
+          Why this setup
+          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <ul class="mt-2 space-y-1 rounded-lg border border-slate-800/70 bg-slate-950/40 p-3 text-[11px] leading-5 text-slate-400">
+          {% for reason in row.reasons %}
+          <li class="flex gap-2"><span class="text-brand-400">•</span>{{ reason }}</li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="px-4 py-16 text-center">
+    <p class="text-sm font-medium text-slate-400">No signals yet</p>
+    <p class="mt-1 text-xs text-slate-600">The scanner is evaluating the markets. The table below shows the current blockers.</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="mt-4 grid gap-4 xl:grid-cols-3">
+  <div class="panel overflow-hidden xl:col-span-2">
+    <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3.5">
+      <div>
+        <h2 class="text-sm font-semibold text-white">Scan history</h2>
+        <p class="mt-0.5 text-[11px] text-slate-500">Latest 60 evaluations across all configured markets.</p>
+      </div>
+    </div>
+    {% if scan_history %}
+    <div class="max-h-[520px] overflow-auto">
+      <table class="data-table">
+        <thead class="sticky top-0 bg-ink-950/95 backdrop-blur">
+          <tr>
+            <th>Time</th>
+            <th>Market</th>
+            <th>Price</th>
+            <th>Trend</th>
+            <th>Structure</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scan in scan_history %}
+          <tr>
+            <td class="whitespace-nowrap text-slate-500">{{ scan.created_at|clock }}</td>
+            <td class="font-semibold text-white">{{ scan.symbol|symbol }}</td>
+            <td class="num text-slate-400">{{ scan.price|price }}</td>
+            <td class="max-w-[150px] truncate text-[11px] text-slate-500">{{ scan.htf_trend or '—' }}</td>
+            <td class="max-w-[150px] truncate text-[11px] text-slate-500">{{ scan.structure or '—' }}</td>
+            <td class="num text-slate-300">{{ scan.score|round|int }}</td>
+            <td><span class="badge {{ 'badge-green' if scan.status == 'signal' else 'badge-slate' }}">{{ scan.status }}</span></td>
+            <td class="max-w-[260px] text-[11px] text-slate-500">{{ scan.reason }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-4 py-12 text-center text-sm text-slate-600">No scans recorded yet.</div>
+    {% endif %}
+  </div>
+
+  <div class="panel overflow-hidden">
+    <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3.5">
+      <div>
+        <h2 class="text-sm font-semibold text-white">Engine log</h2>
+        <p class="mt-0.5 text-[11px] text-slate-500">Recent events, warnings and errors.</p>
+      </div>
+      <span class="badge badge-slate">latest 20</span>
+    </div>
+    {% if logs %}
+    <div class="divide-y divide-slate-800/60">
+      {% for log in logs %}
+      <div class="flex gap-3 px-4 py-2.5">
+        <div class="timeline-dot {{ 'bg-rose-400' if log.level in ['ERROR','WARNING'] else ('bg-emerald-400' if log.level == 'INFO' else 'bg-slate-600') }}"></div>
+        <div class="min-w-0">
+          <div class="text-[11px] leading-5 text-slate-400">{{ log.message }}</div>
+          <div class="text-[10px] text-slate-600">{{ log.created_at|ago }} · {{ log.level }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-4 py-10 text-center text-xs text-slate-600">No events yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

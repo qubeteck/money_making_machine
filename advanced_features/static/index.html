@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AtlasTrade | Trading Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config={theme:{extend:{colors:{ink:'#0b1220',panel:'#111c2e',line:'#223149',mint:'#2dd4a7',sky:'#60a5fa'}}}};
+  </script>
+  <style>
+    body{background:#080f1c;color:#e5edf8;font-family:Inter,ui-sans-serif,system-ui}
+    .panel{background:#111c2e;border:1px solid #223149;border-radius:16px}
+    .muted{color:#91a2ba}.positive{color:#2dd4a7}.negative{color:#fb7185}
+    .navitem{display:flex;gap:12px;align-items:center;padding:11px 13px;border-radius:10px;color:#9fb0c8}
+    .navitem.active,.navitem:hover{background:#1c2b42;color:#fff}
+    canvas{max-width:100%}
+    .tag{font-size:10px;letter-spacing:.08em;font-weight:800;padding:4px 7px;border-radius:6px}
+  </style>
+</head>
+<body>
+<div class="min-h-screen flex">
+  <aside class="hidden lg:flex w-64 shrink-0 border-r border-slate-800/90 p-5 flex-col">
+    <div class="flex items-center gap-3 mb-10 px-2">
+      <div class="w-10 h-10 rounded-xl bg-emerald-400 text-slate-950 grid place-items-center font-black text-xl">A</div>
+      <div><div class="font-bold tracking-wide">ATLASTRADE</div><div class="text-xs muted">INTELLIGENCE TERMINAL</div></div>
+    </div>
+    <div class="text-[10px] tracking-[.2em] muted px-3 mb-3">WORKSPACE</div>
+    <nav class="space-y-1">
+      <a class="navitem active" href="#">▦ <span>Overview</span></a>
+      <a class="navitem" href="#markets">◈ <span>Markets</span></a>
+      <a class="navitem" href="#positions">⇄ <span>Positions</span></a>
+      <a class="navitem" href="#signals">⌁ <span>AI Signals</span></a>
+      <a class="navitem" href="#analytics">▥ <span>Analytics</span></a>
+    </nav>
+    <div class="text-[10px] tracking-[.2em] muted px-3 mt-9 mb-3">SYSTEM</div>
+    <nav class="space-y-1"><a class="navitem" href="#risk">⚙ <span>Risk controls</span></a><a class="navitem" href="#settings">☷ <span>Settings</span></a></nav>
+    <div class="mt-auto panel p-4">
+      <div class="flex items-center justify-between"><span class="text-xs muted">SYSTEM STATUS</span><span class="w-2 h-2 rounded-full bg-emerald-400"></span></div>
+      <div class="font-semibold mt-2">All services online</div><div class="text-xs muted mt-1">Demo environment only</div>
+    </div>
+  </aside>
+
+  <main class="flex-1 min-w-0">
+    <header class="h-20 border-b border-slate-800/90 flex items-center justify-between px-5 md:px-8">
+      <div><div class="text-sm muted">Workspace / Overview</div><h1 class="text-xl font-bold">Trading Overview</h1></div>
+      <div class="flex items-center gap-3">
+        <span class="tag bg-amber-400/15 text-amber-300 border border-amber-400/20">● DEMO DATA</span>
+        <button id="refreshBtn" class="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800">↻ <span class="hidden sm:inline">Refresh</span></button>
+        <div class="w-9 h-9 rounded-full bg-sky-500/20 text-sky-300 grid place-items-center font-bold">AD</div>
+      </div>
+    </header>
+
+    <div class="p-5 md:p-8 space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div><h2 class="text-2xl font-bold">Good evening</h2><p class="muted text-sm mt-1">Your multi-market paper-trading command center.</p></div>
+        <div class="flex items-center gap-2 text-xs muted"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> API connected <span id="updatedAt" class="ml-2">—</span></div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="panel p-5"><div class="flex justify-between muted text-sm"><span>Account balance</span><span>◉</span></div><div id="balance" class="text-2xl font-bold mt-3">$10,000.00</div><div class="text-xs muted mt-2">Starting demo capital</div></div>
+        <div class="panel p-5"><div class="flex justify-between muted text-sm"><span>Equity</span><span>↗</span></div><div id="equity" class="text-2xl font-bold mt-3">$10,482.65</div><div class="text-xs positive mt-2">Unrealized P&L included</div></div>
+        <div class="panel p-5"><div class="flex justify-between muted text-sm"><span>Today's P&L</span><span>◷</span></div><div id="pnl" class="text-2xl font-bold mt-3 positive">+$182.65</div><div id="pnlPct" class="text-xs positive mt-2">+1.78% today</div></div>
+        <div class="panel p-5"><div class="flex justify-between muted text-sm"><span>Win rate</span><span>◎</span></div><div id="winRate" class="text-2xl font-bold mt-3">68.4%</div><div class="text-xs muted mt-2">Demo trade history</div></div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4" id="analytics">
+        <section class="panel p-5 xl:col-span-2">
+          <div class="flex flex-wrap justify-between gap-3 mb-4"><div><h3 class="font-semibold">Equity performance</h3><p class="text-xs muted mt-1">30-day simulated account curve</p></div><span class="tag bg-sky-400/10 text-sky-300">PAPER ACCOUNT</span></div>
+          <div class="h-64"><canvas id="equityChart"></canvas></div>
+        </section>
+        <section class="panel p-5"><h3 class="font-semibold">Portfolio allocation</h3><p class="text-xs muted mt-1 mb-3">Illustrative demo exposure</p><div class="h-56"><canvas id="allocationChart"></canvas></div><div class="grid grid-cols-2 gap-2 text-xs mt-3 muted"><span>● Forex / Gold</span><span>● Crypto</span></div></section>
+      </div>
+
+      <section class="panel p-5">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+          <div><h3 class="font-semibold">Market chart</h3><p class="text-xs muted mt-1">HTML5 Canvas price visualization · synthetic candles</p></div>
+          <div class="flex gap-2">
+            <select id="symbolSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"><option>XAUUSD</option><option>EURUSD</option><option>BTC/USDT</option><option>ETH/USDT</option></select>
+            <select id="tfSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"><option>15m</option><option>5m</option><option>1h</option><option>4h</option></select>
+          </div>
+        </div>
+        <div class="h-72"><canvas id="candleCanvas" class="w-full h-full"></canvas></div>
+        <div class="flex flex-wrap gap-4 text-xs muted mt-3"><span>━ Price</span><span class="positive">━ EMA 20 (illustrative)</span><span class="text-sky-300">Candlestick-style demo plot</span></div>
+      </section>
+
+      <section id="markets" class="panel p-5">
+        <div class="flex justify-between items-center mb-4"><div><h3 class="font-semibold">Market watch</h3><p class="text-xs muted mt-1">Demo quotes — not executable prices</p></div><span class="tag bg-emerald-400/10 text-emerald-300">4 INSTRUMENTS</span></div>
+        <div class="overflow-x-auto"><table class="w-full text-sm min-w-[600px]"><thead class="text-xs muted border-b border-slate-700"><tr><th class="text-left py-3">Instrument</th><th class="text-right">Demo price</th><th class="text-right">24h change</th><th class="text-right">Spread</th><th class="text-right">Session</th></tr></thead><tbody id="marketRows"></tbody></table></div>
+      </section>
+
+      <section id="positions" class="panel p-5">
+        <div class="flex justify-between items-center mb-4"><div><h3 class="font-semibold">Open paper positions</h3><p class="text-xs muted mt-1">No real orders are placed</p></div><span id="positionCount" class="tag bg-sky-400/10 text-sky-300">3 OPEN</span></div>
+        <div class="overflow-x-auto"><table class="w-full text-sm min-w-[760px]"><thead class="text-xs muted border-b border-slate-700"><tr><th class="text-left py-3">Market</th><th>Side</th><th>Entry</th><th>Current</th><th>Stop loss</th><th>Take profit</th><th class="text-right">P&L</th></tr></thead><tbody id="positionRows"></tbody></table></div>
+      </section>
+
+      <section id="signals" class="panel p-5">
+        <div class="flex justify-between items-center mb-4"><div><h3 class="font-semibold">AI strategy signals</h3><p class="text-xs muted mt-1">Illustrative rule-engine output, not AI predictions</p></div><span class="tag bg-violet-400/10 text-violet-300">DEMO FEED</span></div>
+        <div class="overflow-x-auto"><table class="w-full text-sm min-w-[650px]"><thead class="text-xs muted border-b border-slate-700"><tr><th class="text-left py-3">Time</th><th>Market</th><th>Direction</th><th>Strategy</th><th>Timeframe</th><th>Score</th><th>Status</th></tr></thead><tbody id="signalRows"></tbody></table></div>
+      </section>
+      <footer class="text-center text-xs muted py-4">AtlasTrade UI starter · Synthetic demo data · Trading involves substantial risk.</footer>
+    </div>
+  </main>
+</div>
+<script src="/static/js/dashboard.js"></script>
+</body></html>

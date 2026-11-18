@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="icon" type="image/png" href="/static/favicon.ico">
+    <link rel="shortcut icon" type="image/ico" href="/static/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Money Machine | Live prices</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #080f1c;
+        color: #e5edf8;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        min-height: 100vh;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 24px;
+        border-bottom: 1px solid #223149;
+        background: #0c1524;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .logo {
+        width: 38px; height: 38px; border-radius: 11px;
+        background: #2dd4a7; color: #08111f;
+        display: grid; place-items: center;
+        font-weight: 900; font-size: 20px;
+      }
+      .brand h1 { margin: 0; font-size: 16px; letter-spacing: .06em; }
+      .brand p { margin: 2px 0 0; font-size: 10px; letter-spacing: .18em; color: #91a2ba; }
+      nav { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; }
+      nav a { color: #9fb0c8; text-decoration: none; }
+      nav a:hover, nav a.active { color: #fff; }
+      nav a.active { color: #2dd4a7; font-weight: 600; }
+      main { max-width: 1000px; margin: 0 auto; padding: 28px 20px 48px; }
+      .toolbar {
+        display: flex; flex-wrap: wrap; gap: 14px;
+        align-items: center; justify-content: space-between;
+        margin-bottom: 18px;
+      }
+      .toolbar h2 { margin: 0; font-size: 22px; }
+      .toolbar p { margin: 4px 0 0; color: #91a2ba; font-size: 13px; }
+      .status {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 12px; border: 1px solid #223149; border-radius: 999px;
+        background: #111c2e; font-size: 12px; color: #c7d3e5;
+      }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
+      .dot.online { background: #2dd4a7; box-shadow: 0 0 0 4px rgba(45, 212, 167, .12); }
+      .dot.offline { background: #fb7185; }
+      .panel { background: #111c2e; border: 1px solid #223149; border-radius: 16px; overflow: hidden; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      thead { color: #91a2ba; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+      th { text-align: left; padding: 12px 16px; border-bottom: 1px solid #223149; }
+      th.num, td.num { text-align: right; }
+      td { padding: 13px 16px; border-bottom: 1px solid #1a2740; }
+      tbody tr:last-child td { border-bottom: 0; }
+      tbody tr:hover { background: #162338; }
+      .symbol { font-weight: 700; }
+      .sub { display: block; margin-top: 3px; color: #91a2ba; font-size: 11px; }
+      .price { font-variant-numeric: tabular-nums; font-weight: 600; }
+      .up { color: #2dd4a7; }
+      .down { color: #fb7185; }
+      .muted { color: #91a2ba; }
+      .tag {
+        display: inline-block; padding: 4px 8px; border-radius: 6px;
+        font-size: 10px; font-weight: 800; letter-spacing: .07em;
+        background: rgba(96, 165, 250, .13); color: #93c5fd;
+      }
+      .empty { padding: 26px 0; text-align: center; color: #91a2ba; font-size: 13px; }
+      .note { margin-top: 14px; color: #91a2ba; font-size: 12px; line-height: 1.6; }
+      .note code { color: #c7d3e5; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <div class="logo">M</div>
+        <div>
+          <h1>MONEY MACHINE</h1>
+          <p>LIVE PRICE FEED</p>
+        </div>
+      </div>
+      <nav>
+        <a href="/">Overview</a>
+        <a href="/advanced">Command Center</a>
+        <a href="/trades">Trades</a>
+        <a href="/live" class="active" aria-current="page">Live prices</a>
+        <a href="/signals">Signals</a>
+        <a href="/backtest">Backtest</a>
+        <a href="/settings">Settings</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="toolbar">
+        <div>
+          <h2>WebSocket ticker</h2>
+          <p>Latest scan price per symbol, pushed from <code>/ws/prices</code>.</p>
+        </div>
+        <div class="status">
+          <span id="dot" class="dot"></span>
+          <span id="statusText">Connecting…</span>
+          <span id="updatedAt" class="muted">—</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <table>
+          <thead>
+            <tr>
+              <th>Instrument</th>
+              <th class="num">Price</th>
+              <th class="num">HTF trend</th>
+              <th class="num">Structure</th>
+              <th class="num">Score</th>
+              <th class="num">Status</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="6" class="empty">Waiting for the first tick…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="note">
+        This feed is for the dashboard only. The trading engine still polls MEXC OHLCV on
+        <code>SCAN_INTERVAL_SECONDS</code>; intrabar moves are not used for fills.
+        The WebSocket authenticates with a short-lived token (or <code>?token=</code> for API clients).
+      </p>
+    </main>
+
+    <script>
+      window.__WS_TOKEN__ = "__EMBEDDED_WS_TOKEN__";
+
+      const dot = document.getElementById("dot");
+      const statusText = document.getElementById("statusText");
+      const updatedAt = document.getElementById("updatedAt");
+      const rows = document.getElementById("rows");
+
+      const escapeHtml = (value) =>
+        String(value ?? "").replace(/[&<>"']/g, (character) => {
+          switch (character) {
+            case "&": return "&";
+            case "<": return "<";
+            case ">": return ">";
+            case '"': return '"';
+            case "'": return "'";
+          }
+        });
+
+      const price = (value) => {
+        const number = Number(value);
+        if (!number) return "—";
+        if (Math.abs(number) >= 1000) return number.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (Math.abs(number) >= 1) return number.toFixed(4);
+        return number.toFixed(6);
+      };
+
+      const trendLabel = (value) => String(value || "neutral").replace(/_/g, " ");
+
+      function setState(state, text) {
+        dot.className = `dot ${state}`;
+        statusText.textContent = text;
+      }
+
+      function render(data) {
+        const tickers = Array.isArray(data.tickers) ? data.tickers : [];
+        rows.innerHTML = tickers.length
+          ? tickers.map((row) => {
+              const trend = String(row.trend || "neutral");
+              const trendClass = trend.includes("bull") || trend === "up" ? "up" : trend.includes("bear") || trend === "down" ? "down" : "muted";
+              return `<tr>
+                <td><span class="symbol">${escapeHtml(row.symbol)}</span><span class="sub">MEXC futures</span></td>
+                <td class="num price">${price(row.price)}</td>
+                <td class="num ${trendClass}">${escapeHtml(trendLabel(trend))}</td>
+                <td class="num muted">${escapeHtml(row.structure || "—")}</td>
+                <td class="num">${row.score ? Number(row.score).toFixed(1) : "—"}</td>
+                <td class="num"><span class="tag">${escapeHtml(row.status || "pending")}</span></td>
+              </tr>`;
+            }).join("")
+          : `<tr><td colspan="6" class="empty">No scan results yet. Wait for the engine to complete a scan.</td></tr>`;
+
+        if (data.updated_at) {
+          updatedAt.textContent = `Updated ${new Date(data.updated_at).toLocaleTimeString()}`;
+        }
+      }
+
+      function resolveToken() {
+        const params = new URLSearchParams(window.location.search);
+        const queryToken = params.get("token");
+        if (queryToken) {
+          params.delete("token");
+          const cleanUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+          window.history.replaceState({}, "", cleanUrl);
+          return queryToken;
+        }
+        return window.__WS_TOKEN__ || "";
+      }
+
+      let token = resolveToken();
+      let socket;
+      let reconnectDelay = 1500;
+      let refreshingToken = false;
+      let tokenRetries = 0;
+
+      async function refreshToken() {
+        if (refreshingToken) return false;
+        refreshingToken = true;
+        try {
+          const response = await fetch("/auth/ws-token", { method: "POST" });
+          if (!response.ok) return false;
+          const body = await response.json();
+          if (body.auth_required && body.token) {
+            token = body.token;
+            return true;
+          }
+          return false;
+        } catch {
+          return false;
+        } finally {
+          refreshingToken = false;
+        }
+      }
+
+      function connect() {
+        const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const query = token ? `?token=${encodeURIComponent(token)}` : "";
+        setState("", "Connecting…");
+        socket = new WebSocket(`${scheme}//${window.location.host}/ws/prices${query}`);
+
+        socket.addEventListener("open", () => {
+          reconnectDelay = 1500;
+          tokenRetries = 0;
+          setState("online", "Live");
+        });
+        socket.addEventListener("message", (event) => {
+          try {
+            render(JSON.parse(event.data));
+          } catch (error) {
+            console.error("Could not parse ticker message", error);
+          }
+        });
+        socket.addEventListener("close", async (event) => {
+          if (event.code === 1008) {
+            setState("offline", "Refreshing token…");
+            if (tokenRetries < 2 && (await refreshToken())) {
+              tokenRetries += 1;
+              connect();
+            } else {
+              setState("offline", "Unauthorized — reload the page or open with ?token=");
+            }
+            return;
+          }
+          setState("offline", "Reconnecting…");
+          setTimeout(connect, reconnectDelay);
+          reconnectDelay = Math.min(15000, reconnectDelay * 1.7);
+        });
+        socket.addEventListener("error", () => {
+          setState("offline", "Connection error");
+        });
+      }
+
+      connect();
+    </script>
+  </body>
+</html>

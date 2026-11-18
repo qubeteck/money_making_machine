@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Login · Money Machine{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-12 px-4 sm:px-6 lg:px-8">
+  <div class="panel p-8 mx-auto">
+    <div class="text-center mb-8">
+      <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/15 ring-1 ring-brand-500/30 mx-auto mb-4">
+        <svg class="h-6 w-6 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 17l5-5 4 3 7-9" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 6h5v5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold tracking-tight text-white">Sign in</h2>
+      <p class="mt-2 text-sm text-slate-500">Enter your admin credentials to access the trading dashboard.</p>
+    </div>
+
+    <form method="post" action="/auth/login" class="space-y-4">
+      <div>
+        <label class="field-label" for="username">Username</label>
+        <input class="field" id="username" name="username" type="text" required autocomplete="username" value="admin">
+      </div>
+      <div>
+        <label class="field-label" for="password">Password</label>
+        <input class="field" id="password" name="password" type="password" required autocomplete="current-password">
+      </div>
+      <div class="flex items-center justify-between">
+        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+          <input type="checkbox" class="h-4 w-4 rounded border-slate-700 bg-slate-950 text-brand-500"> Remember me
+        </label>
+      </div>
+      <div>
+        <button class="btn btn-primary w-full" type="submit">Sign in</button>
+      </div>
+    </form>
+
+    <div class="mt-6 border-t border-slate-800/60 pt-6 space-y-4">
+      <p class="text-center text-[11px] text-slate-500">
+        Don't have an account?
+        <a href="/auth/register" class="text-brand-400 hover:text-brand-300">Register</a>
+      </p>
+
+      {% if telegram_bot_configured %}
+      <a href="/auth/telegram/login" class="btn w-full flex items-center justify-center gap-2">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        Sign in with Telegram
+      </a>
+      {% endif %}
+    </div>
+
+    <p class="mt-4 text-center text-[11px] text-slate-500">
+      Credentials are stored in the database. Configured via environment or created through registration.
+    </p>
+  </div>
+</div>
+{% endblock %}

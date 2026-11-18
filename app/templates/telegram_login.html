@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Telegram Login · Money Machine{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-12 px-4 sm:px-6 lg:px-8">
+  <div class="panel p-8 mx-auto">
+    <div class="text-center mb-8">
+      <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/15 ring-1 ring-brand-500/30 mx-auto mb-4">
+        <svg class="h-6 w-6 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold tracking-tight text-white">Telegram Login</h2>
+      <p class="mt-2 text-sm text-slate-500">Sign in using your Telegram chat ID. A verification code will be sent to your Telegram bot.</p>
+    </div>
+
+    <div class="space-y-4">
+      <div class="border border-slate-800/60 rounded-xl p-4 bg-slate-900/40">
+        <h3 class="text-sm font-semibold text-white mb-3">Step 1: Get your Chat ID</h3>
+        <ol class="text-[11px] leading-6 text-slate-400 space-y-2">
+          <li>Open Telegram and search for your bot</li>
+          <li>Send <span class="kbd">/id</span> to the bot</li>
+          <li>Copy the numeric chat ID it replies with</li>
+        </ol>
+      </div>
+
+      <form method="post" action="/auth/telegram/request-code" class="space-y-4" id="telegramCodeForm">
+        <input type="hidden" name="action" value="login">
+        <div>
+          <label class="field-label" for="chat_id">Telegram Chat ID</label>
+          <input class="field" id="chat_id" name="chat_id" type="text" required placeholder="e.g. 5915437194">
+        </div>
+        <div>
+          <button class="btn btn-primary w-full" type="submit" id="requestCodeBtn">Send Verification Code</button>
+        </div>
+      </form>
+
+      <div id="codeVerifySection" class="hidden space-y-4 border-t border-slate-800/60 pt-4">
+        <form method="post" action="/auth/telegram/verify-code" class="space-y-4">
+          <input type="hidden" name="chat_id" id="verifyChatId">
+          <div>
+            <label class="field-label" for="code">Verification Code</label>
+            <input class="field" id="code" name="code" type="text" required maxlength="6" placeholder="123456">
+          </div>
+          <div>
+            <button class="btn btn-primary w-full" type="submit">Verify & Sign In</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="text-center">
+        <a href="/auth/register" class="text-sm text-slate-400 hover:text-white">Don't have an account? Register with email/password</a>
+      </div>
+      <div class="text-center mt-4">
+        <a href="/auth/login" class="text-sm text-slate-400 hover:text-white">Back to regular login</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+  const form = document.getElementById("telegramCodeForm");
+  const verifySection = document.getElementById("codeVerifySection");
+  const verifyChatId = document.getElementById("verifyChatId");
+  const requestBtn = document.getElementById("requestCodeBtn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const chatId = document.getElementById("chat_id").value.trim();
+    if (!chatId) return;
+
+    requestBtn.disabled = true;
+    requestBtn.textContent = "Sending…";
+
+    try {
+      const response = await fetch("/auth/telegram/request-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Requested-With": "XMLHttpRequest",
+          "Accept": "application/json",
+        },
+        body: new URLSearchParams({ chat_id: chatId, action: "login" }),
+      });
+      const result = await response.json();
+
+      if (result.ok) {
+        verifyChatId.value = chatId;
+        verifySection.classList.remove("hidden");
+        verifySection.scrollIntoView({ behavior: "smooth" });
+      } else {
+        alert(result.error || "Failed to send code");
+      }
+    } catch (err) {
+      alert("Network error. Please try again.");
+    } finally {
+      requestBtn.disabled = false;
+      requestBtn.textContent = "Send Verification Code";
+    }
+  });
+</script>
+{% endblock %}

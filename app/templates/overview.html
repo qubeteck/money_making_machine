@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <div class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+      <span class="h-1.5 w-1.5 rounded-full {{ 'bg-amber-400' if settings.paused else 'bg-emerald-400 animate-pulse' }}"></span>
+      Live command deck
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Overview</h1>
+    <p class="mt-1 max-w-2xl text-sm text-slate-500">
+      Multi-timeframe confluence: 4H trend filter, 1H structure, 15M execution trigger.
+    </p>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    <form method="post" action="/actions/scan" data-loading="true">
+      <button class="btn btn-ghost" type="submit">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        Scan now
+      </button>
+    </form>
+    <form method="post" action="{{ '/actions/resume' if settings.paused else '/actions/pause' }}">
+      <button class="btn {{ 'btn-primary' if settings.paused else 'btn-ghost' }}" type="submit">
+        {{ 'Resume engine' if settings.paused else 'Pause engine' }}
+      </button>
+    </form>
+    <form method="post" action="/actions/kill" data-confirm="KILL SWITCH: close every open position at market and pause the bot?">
+      <button class="btn btn-danger" type="submit">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+        Kill switch
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if not settings.paper_mode %}
+<div class="mb-5 flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
+  <svg class="mt-0.5 h-4 w-4 shrink-0 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+  <div>
+    <div class="text-sm font-semibold text-rose-200">LIVE mode is armed</div>
+    <p class="mt-0.5 text-xs text-rose-200/70">Real orders will be sent to MEXC. Confirm position sizing, leverage and stops before you resume.</p>
+  </div>
+</div>
+{% endif %}
+
+<div id="stats-panel" hx-get="/partials/stats" hx-trigger="every 10s" hx-swap="innerHTML">
+  {% include "partials/stats.html" %}
+</div>
+
+<div class="mt-4 grid gap-4 xl:grid-cols-3">
+  <div class="panel overflow-hidden p-4 xl:col-span-2">
+    <div class="mb-4 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold text-white">Equity curve</h2>
+        <p class="mt-0.5 text-[11px] text-slate-500">Account equity snapshots from the engine, in USDT.</p>
+      </div>
+      <span class="badge badge-slate">{{ mode_label }}</span>
+    </div>
+    <div class="chart-wrap"><canvas id="equityChart"></canvas></div>
+  </div>
+
+  <div class="panel p-4">
+    <div class="mb-4 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold text-white">Risk guardrails</h2>
+        <p class="mt-0.5 text-[11px] text-slate-500">Hard limits enforced before every order.</p>
+      </div>
+      <svg class="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+    </div>
+    <div class="space-y-2.5 text-xs">
+      <div class="flex items-center justify-between"><span class="text-slate-500">Risk per trade</span><span class="num font-semibold text-slate-200">{{ settings.risk_pct|pct(false) }}</span></div>
+      <div class="flex items-center justify-between"><span class="text-slate-500">Daily loss stop</span><span class="num font-semibold text-slate-200">{{ settings.max_daily_loss_pct|pct(false) }}</span></div>
+      <div class="flex items-center justify-between"><span class="text-slate-500">Max open positions</span><span class="num font-semibold text-slate-200">{{ settings.max_open_positions }}</span></div>
+      <div class="flex items-center justify-between"><span class="text-slate-500">Leverage cap</span><span class="num font-semibold text-slate-200">{{ settings.leverage }}x</span></div>
+      <div class="flex items-center justify-between"><span class="text-slate-500">Min confluence</span><span class="num font-semibold text-slate-200">{{ settings.min_score|round|int }}/100</span></div>
+      <div class="flex items-center justify-between"><span class="text-slate-500">Session filter</span><span class="font-semibold text-slate-200">{{ 'On' if settings.session_filter else 'Off' }}</span></div>
+      <div class="flex items-center justify-between"><span class="text-slate-500">3-loss cooldown</span><span class="font-semibold text-slate-200">6 hours</span></div>
+    </div>
+    <div class="mt-4 rounded-lg border border-slate-800 bg-slate-950/50 p-3 text-[11px] leading-5 text-slate-500">
+      One position per market. Stops are calculated from structure + ATR. Leverage only caps notional; it does not increase risk per trade.
+    </div>
+  </div>
+</div>
+
+<div class="mt-4 grid gap-4 xl:grid-cols-3">
+  <div class="space-y-4 xl:col-span-2">
+    <div id="positions-panel" hx-get="/partials/positions" hx-trigger="every 10s" hx-swap="innerHTML">
+      {% include "partials/positions.html" %}
+    </div>
+    <div id="scanner-panel" hx-get="/partials/scanner" hx-trigger="every 20s" hx-swap="innerHTML">
+      {% include "partials/scanner.html" %}
+    </div>
+  </div>
+
+  <div class="space-y-4">
+    <div id="signals-panel" hx-get="/partials/signals" hx-trigger="every 15s" hx-swap="innerHTML">
+      {% include "partials/signals.html" %}
+    </div>
+
+    <div class="panel overflow-hidden">
+      <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3.5">
+        <div>
+          <h2 class="text-sm font-semibold text-white">Engine activity</h2>
+          <p class="mt-0.5 text-[11px] text-slate-500">Latest events and errors.</p>
+        </div>
+        <span class="badge badge-slate">log</span>
+      </div>
+      {% if logs %}
+      <div class="divide-y divide-slate-800/60">
+        {% for log in logs %}
+        <div class="flex gap-3 px-4 py-2.5">
+          <div class="timeline-dot {{ 'bg-rose-400' if log.level in ['ERROR','WARNING'] else 'bg-slate-600' }}"></div>
+          <div class="min-w-0">
+            <div class="text-[11px] leading-5 text-slate-400">{{ log.message }}</div>
+            <div class="text-[10px] text-slate-600">{{ log.created_at|ago }} · {{ log.level }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-4 py-8 text-center text-xs text-slate-600">No engine events yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

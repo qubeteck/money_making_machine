@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Trades{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Journal</div>
+    <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Trades</h1>
+    <p class="mt-1 text-sm text-slate-500">Every simulated and live fill, with the reason it closed.</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <span class="badge badge-slate">{{ mode_label }}</span>
+    <span class="badge {{ 'badge-amber' if settings.paused else 'badge-green' }}">{{ status_label }}</span>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+  <div class="panel p-4">
+    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Net PnL · all time</div>
+    <div class="num mt-2 text-2xl font-bold {{ 'text-emerald-400' if stats.net_pnl > 0 else ('text-rose-400' if stats.net_pnl < 0 else 'text-white') }}">{{ '+' if stats.net_pnl > 0 else '' }}{{ stats.net_pnl|money }}</div>
+    <div class="mt-1 text-[11px] text-slate-500">USDT after fees</div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Today</div>
+    <div class="num mt-2 text-2xl font-bold {{ 'text-emerald-400' if today_stats.net_pnl > 0 else ('text-rose-400' if today_stats.net_pnl < 0 else 'text-white') }}">{{ '+' if today_stats.net_pnl > 0 else '' }}{{ today_stats.net_pnl|money }}</div>
+    <div class="mt-1 text-[11px] text-slate-500">{{ today_stats.trades }} closed trades</div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Win rate</div>
+    <div class="num mt-2 text-2xl font-bold text-white">{{ stats.win_rate|pct(false) }}</div>
+    <div class="mt-1 text-[11px] text-slate-500">{{ stats.wins }}W · {{ stats.losses }}L</div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Max drawdown</div>
+    <div class="num mt-2 text-2xl font-bold text-white">{{ stats.max_drawdown_pct|pct(false) }}</div>
+    <div class="mt-1 text-[11px] text-slate-500">Profit factor {{ '∞' if stats.profit_factor >= 999 else '%.2f'|format(stats.profit_factor) }}</div>
+  </div>
+</div>
+
+<div class="mt-4 panel p-4">
+  <form method="get" action="/trades" class="flex flex-wrap items-end gap-3">
+    <div>
+      <label class="field-label" for="status">Status</label>
+      <select id="status" name="status" class="field min-w-[130px]">
+        <option value="" {{ 'selected' if not filters.status else '' }}>All</option>
+        <option value="open" {{ 'selected' if filters.status == 'open' else '' }}>Open</option>
+        <option value="closed" {{ 'selected' if filters.status == 'closed' else '' }}>Closed</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label" for="mode">Mode</label>
+      <select id="mode" name="mode" class="field min-w-[130px]">
+        <option value="" {{ 'selected' if not filters.mode else '' }}>All</option>
+        <option value="paper" {{ 'selected' if filters.mode == 'paper' else '' }}>Paper</option>
+        <option value="live" {{ 'selected' if filters.mode == 'live' else '' }}>Live</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label" for="symbol">Market</label>
+      <input id="symbol" name="symbol" value="{{ filters.symbol }}" placeholder="BTC/USDT" class="field w-40">
+    </div>
+    <button class="btn btn-primary" type="submit">Filter</button>
+    <a href="/trades" class="btn btn-ghost">Reset</a>
+    <span class="ml-auto text-[11px] text-slate-600">Showing the latest 300 trades</span>
+  </form>
+</div>
+
+<div class="mt-4 panel overflow-hidden">
+  {% if trade_rows %}
+  <div class="overflow-x-auto">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Opened</th>
+          <th>Market</th>
+          <th>Side</th>
+          <th>Qty</th>
+          <th>Entry</th>
+          <th>Exit / Mark</th>
+          <th>Stop</th>
+          <th>Target</th>
+          <th>PnL</th>
+          <th>R</th>
+          <th>Status</th>
+          <th>Reason</th>
+          <th>Mode</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in trade_rows %}
+        {% set trade = row.trade %}
+        <tr>
+          <td class="num text-slate-500">{{ trade.id }}</td>
+          <td class="whitespace-nowrap text-slate-400">{{ trade.opened_at|dt }}</td>
+          <td class="font-semibold text-white">{{ trade.symbol|symbol }}</td>
+          <td><span class="badge {{ 'badge-green' if trade.side == 'long' else 'badge-red' }}">{{ trade.side }}</span></td>
+          <td class="num text-slate-300">{{ trade.qty }}</td>
+          <td class="num text-slate-300">{{ trade.entry|price }}</td>
+          <td class="num text-slate-200">{{ (trade.exit_price if trade.status == 'closed' else row.price)|price }}</td>
+          <td class="num text-rose-300/80">{{ trade.stop|price }}</td>
+          <td class="num text-emerald-300/80">{{ trade.take_profit|price }}</td>
+          <td class="num font-semibold {{ 'text-emerald-400' if (trade.pnl if trade.status == 'closed' else row.upnl) > 0 else ('text-rose-400' if (trade.pnl if trade.status == 'closed' else row.upnl) < 0 else 'text-slate-300') }}">
+            {% set shown_pnl = trade.pnl if trade.status == 'closed' else row.upnl %}
+            {{ '+' if shown_pnl > 0 else '' }}{{ shown_pnl|money }}
+          </td>
+          <td class="num {{ 'text-emerald-400' if trade.r_multiple > 0 else ('text-rose-400' if trade.r_multiple < 0 else 'text-slate-500') }}">{{ '%+.2f'|format(trade.r_multiple) }}</td>
+          <td>
+            <span class="badge {{ 'badge-slate' if trade.status == 'closed' else 'badge-amber' }}">{{ trade.status }}</span>
+          </td>
+          <td class="text-[11px] text-slate-500">{{ trade.exit_reason or '—' }}</td>
+          <td><span class="badge {{ 'badge-red' if trade.mode == 'live' else 'badge-slate' }}">{{ trade.mode }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-4 py-16 text-center">
+    <p class="text-sm font-medium text-slate-400">No trades match this filter</p>
+    <p class="mt-1 text-xs text-slate-600">The engine has not opened any positions yet.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

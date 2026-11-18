@@ -1,0 +1,10 @@
+{$DOMAIN:localhost} {
+	reverse_proxy money-machine:8000 {
+		# Preserve streaming for Server-Sent Events.
+		flush_interval -1
+	}
+
+	header {
+		-Server
+	}
+}

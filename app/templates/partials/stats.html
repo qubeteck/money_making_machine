@@ -1,0 +1,43 @@
+<div class="grid grid-cols-2 gap-3 xl:grid-cols-5">
+  <div class="panel panel-hover col-span-2 p-4 sm:col-span-1">
+    <div class="flex items-center justify-between">
+      <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Equity</span>
+      <span class="badge {{ 'badge-green' if snapshot.equity >= settings.starting_balance else 'badge-red' }}">
+        {{ ((snapshot.equity / settings.starting_balance - 1) * 100)|pct }}
+      </span>
+    </div>
+    <div class="num mt-3 text-2xl font-bold tracking-tight text-white">{{ snapshot.equity|money }}</div>
+    <div class="mt-1 text-[11px] text-slate-500">Balance {{ snapshot.balance|money }} USDT</div>
+  </div>
+
+  <div class="panel panel-hover p-4">
+    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Today realized</div>
+    <div class="num mt-3 text-2xl font-bold tracking-tight {{ 'text-emerald-400' if today_pnl > 0 else ('text-rose-400' if today_pnl < 0 else 'text-white') }}">
+      {{ '+' if today_pnl > 0 else '' }}{{ today_pnl|money }}
+    </div>
+    <div class="mt-1 text-[11px] text-slate-500">USDT · closed trades</div>
+  </div>
+
+  <div class="panel panel-hover p-4">
+    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Open PnL</div>
+    <div class="num mt-3 text-2xl font-bold tracking-tight {{ 'text-emerald-400' if snapshot.open_pnl > 0 else ('text-rose-400' if snapshot.open_pnl < 0 else 'text-white') }}">
+      {{ '+' if snapshot.open_pnl > 0 else '' }}{{ snapshot.open_pnl|money }}
+    </div>
+    <div class="mt-1 text-[11px] text-slate-500">{{ positions|length }}/{{ settings.max_open_positions }} positions open</div>
+  </div>
+
+  <div class="panel panel-hover p-4">
+    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Win rate</div>
+    <div class="num mt-3 text-2xl font-bold tracking-tight text-white">{{ stats.win_rate|pct(false) }}</div>
+    <div class="mt-1 text-[11px] text-slate-500">{{ stats.wins }}W · {{ stats.losses }}L · {{ stats.trades }} trades</div>
+  </div>
+
+  <div class="panel panel-hover col-span-2 p-4 sm:col-span-1">
+    <div class="flex items-center justify-between">
+      <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Signals today</span>
+      <svg class="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+    </div>
+    <div class="num mt-3 text-2xl font-bold tracking-tight text-white">{{ signals_today }}</div>
+    <div class="mt-1 text-[11px] text-slate-500">Confluence checks logged</div>
+  </div>
+</div>

@@ -1,0 +1,54 @@
+<div class="panel overflow-hidden">
+  <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3.5">
+    <div>
+      <h2 class="text-sm font-semibold text-white">Scanner</h2>
+      <p class="mt-0.5 text-[11px] text-slate-500">Latest evaluation per market, including blocked setups.</p>
+    </div>
+    <span class="badge badge-slate">{{ scans|length }} markets</span>
+  </div>
+
+  {% if scans %}
+  <div class="overflow-x-auto">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Market</th>
+          <th>Price</th>
+          <th>HTF trend</th>
+          <th>Structure</th>
+          <th>Score</th>
+          <th>Status</th>
+          <th>Reason</th>
+          <th>When</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for scan in scans %}
+        <tr>
+          <td class="font-semibold text-white">{{ scan.symbol|symbol }}</td>
+          <td class="num text-slate-300">{{ scan.price|price }}</td>
+          <td class="max-w-[180px] truncate text-slate-400">{{ scan.htf_trend or '—' }}</td>
+          <td class="max-w-[180px] truncate text-slate-400">{{ scan.structure or '—' }}</td>
+          <td class="num {{ 'text-emerald-300' if scan.score >= settings.min_score else 'text-slate-400' }}">{{ scan.score|round|int }}</td>
+          <td>
+            {% if scan.status == 'signal' %}
+            <span class="badge badge-green">{{ scan.status }}</span>
+            {% elif scan.status == 'below-threshold' %}
+            <span class="badge badge-amber">{{ scan.status }}</span>
+            {% elif scan.status in ['no-trend', 'structure-misaligned', 'waiting-trigger', 'no-pullback'] %}
+            <span class="badge badge-slate">{{ scan.status }}</span>
+            {% else %}
+            <span class="badge badge-slate">{{ scan.status }}</span>
+            {% endif %}
+          </td>
+          <td class="max-w-[330px] text-[11px] text-slate-500">{{ scan.reason }}</td>
+          <td class="whitespace-nowrap text-slate-500">{{ scan.created_at|ago }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-4 py-10 text-center text-sm text-slate-500">Waiting for the first scan…</div>
+  {% endif %}
+</div>

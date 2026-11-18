@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Configuration</div>
+  <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Settings</h1>
+  <p class="mt-1 max-w-2xl text-sm text-slate-500">Strategy, risk and Telegram controls. API secrets stay in <span class="kbd">.env</span> and are never written to the database.</p>
+</div>
+
+<div class="grid gap-4 xl:grid-cols-3">
+  <div class="space-y-4 xl:col-span-2">
+    <form method="post" action="/settings" class="panel p-5" data-ajax="true" data-loading="true">
+      <div class="flex items-center justify-between border-b border-slate-800/60 pb-4">
+        <div>
+          <h2 class="text-sm font-semibold text-white">Markets & strategy</h2>
+          <p class="mt-0.5 text-[11px] text-slate-500">The engine maps structure on the higher timeframe and executes on the lower one.</p>
+        </div>
+        <span class="badge badge-green">SMC</span>
+      </div>
+
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label class="field-label" for="symbols">Symbols (comma separated)</label>
+          <input class="field" id="symbols" name="symbols" value="{{ settings.symbols }}" placeholder="BTC/USDT, ETH/USDT, SOL/USDT">
+          <p class="mt-1 text-[10px] text-slate-600">MEXC USDT perpetuals. The bot appends the settlement leg automatically.</p>
+        </div>
+        <div>
+          <label class="field-label" for="trend_timeframe">Trend filter</label>
+          <select class="field" id="trend_timeframe" name="trend_timeframe">
+            {% for tf in ['1h','4h','8h','1d'] %}<option value="{{ tf }}" {{ 'selected' if settings.trend_timeframe == tf else '' }}>{{ tf }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="structure_timeframe">Structure timeframe</label>
+          <select class="field" id="structure_timeframe" name="structure_timeframe">
+            {% for tf in ['15m','30m','1h','4h'] %}<option value="{{ tf }}" {{ 'selected' if settings.structure_timeframe == tf else '' }}>{{ tf }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="entry_timeframe">Execution timeframe</label>
+          <select class="field" id="entry_timeframe" name="entry_timeframe">
+            {% for tf in ['1m','5m','15m','30m'] %}<option value="{{ tf }}" {{ 'selected' if settings.entry_timeframe == tf else '' }}>{{ tf }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="min_score">Minimum confluence score</label>
+          <input class="field" id="min_score" name="min_score" type="number" min="0" max="100" step="1" value="{{ settings.min_score }}">
+        </div>
+      </div>
+
+      <div class="mt-6 border-b border-slate-800/60 pb-4">
+        <h2 class="text-sm font-semibold text-white">Risk engine</h2>
+        <p class="mt-0.5 text-[11px] text-slate-500">Position size is derived from the stop distance, not from a fixed lot size.</p>
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <label class="field-label" for="risk_pct">Risk per trade %</label>
+          <input class="field" id="risk_pct" name="risk_pct" type="number" min="0.05" max="5" step="0.05" value="{{ settings.risk_pct }}">
+        </div>
+        <div>
+          <label class="field-label" for="max_daily_loss_pct">Daily loss stop %</label>
+          <input class="field" id="max_daily_loss_pct" name="max_daily_loss_pct" type="number" min="0.1" max="20" step="0.1" value="{{ settings.max_daily_loss_pct }}">
+        </div>
+        <div>
+          <label class="field-label" for="max_open_positions">Max open positions</label>
+          <input class="field" id="max_open_positions" name="max_open_positions" type="number" min="1" max="10" value="{{ settings.max_open_positions }}">
+        </div>
+        <div>
+          <label class="field-label" for="leverage">Leverage cap</label>
+          <input class="field" id="leverage" name="leverage" type="number" min="1" max="50" value="{{ settings.leverage }}">
+        </div>
+        <div>
+          <label class="field-label" for="starting_balance">Paper starting balance</label>
+          <input class="field" id="starting_balance" name="starting_balance" type="number" min="10" step="10" value="{{ settings.starting_balance }}">
+        </div>
+        <div>
+          <label class="field-label" for="taker_fee_pct">Taker fee % / side</label>
+          <input class="field" id="taker_fee_pct" name="taker_fee_pct" type="number" min="0" max="1" step="0.01" value="{{ settings.taker_fee_pct }}">
+        </div>
+        <div>
+          <label class="field-label" for="slippage_pct">Slippage % / fill</label>
+          <input class="field" id="slippage_pct" name="slippage_pct" type="number" min="0" max="1" step="0.01" value="{{ settings.slippage_pct }}">
+        </div>
+      </div>
+
+      <div class="mt-6 border-b border-slate-800/60 pb-4">
+        <h2 class="text-sm font-semibold text-white">Sessions & Telegram</h2>
+        <p class="mt-0.5 text-[11px] text-slate-500">Crypto trades 24/7. The session filter is optional and uses UTC hours.</p>
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2 flex items-center gap-3">
+          <input type="hidden" name="session_filter" value="off">
+          <input id="session_filter" name="session_filter" type="checkbox" class="h-4 w-4 rounded border-slate-700 bg-slate-950 text-brand-500" {{ 'checked' if settings.session_filter else '' }}>
+          <label for="session_filter" class="text-sm text-slate-300">Only trade inside the session window</label>
+        </div>
+        <div>
+          <label class="field-label" for="session_start_utc">Session start (UTC hour)</label>
+          <input class="field" id="session_start_utc" name="session_start_utc" type="number" min="0" max="23" value="{{ settings.session_start_utc }}">
+        </div>
+        <div>
+          <label class="field-label" for="session_end_utc">Session end (UTC hour)</label>
+          <input class="field" id="session_end_utc" name="session_end_utc" type="number" min="0" max="23" value="{{ settings.session_end_utc }}">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="field-label" for="telegram_chat_id">Telegram chat ID</label>
+          <input class="field" id="telegram_chat_id" name="telegram_chat_id" value="{{ settings.telegram_chat_id }}" placeholder="123456789">
+          <p class="mt-1 text-[10px] text-slate-600">Send <span class="kbd">/id</span> to your bot, then put the number here or in TELEGRAM_CHAT_ID.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 border-t border-slate-800/60 pt-4">
+        <button class="btn btn-ghost" type="reset">Reset</button>
+        <button class="btn btn-primary" type="submit">Save settings</button>
+      </div>
+      <p class="mt-3 text-right text-[10px] text-slate-600">Saved changes apply on the next scan. Blank numeric fields keep their current value.</p>
+    </form>
+
+    <div class="panel p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-white">Execution mode</h2>
+          <p class="mt-0.5 text-[11px] text-slate-500">Live mode requires the .env switch and API keys. It always starts paused.</p>
+        </div>
+        <span class="badge {{ 'badge-red' if not settings.paper_mode else 'badge-slate' }}">{{ mode_label }}</span>
+      </div>
+      <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <form method="post" action="/actions/mode/paper" class="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+          <div class="text-xs font-semibold text-slate-200">Paper trading</div>
+          <p class="mt-1 text-[11px] leading-5 text-slate-500">Simulated fills with fees and slippage. No MEXC orders.</p>
+          <button class="btn btn-ghost mt-3 w-full" type="submit" {{ 'disabled' if settings.paper_mode else '' }}>Use paper mode</button>
+        </form>
+        <form method="post" action="/actions/mode/live" class="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4" data-confirm="Arm LIVE trading? Real orders will be sent to MEXC. The bot will start paused.">
+          <div class="text-xs font-semibold text-rose-200">Live trading</div>
+          <p class="mt-1 text-[11px] leading-5 text-slate-500">Real MEXC futures orders. Requires KYC and trade-only API keys.</p>
+          <button class="btn btn-danger mt-3 w-full" type="submit" {{ 'disabled' if not live_allowed or not mexc_configured or not settings.paper_mode else '' }}>Arm live mode</button>
+          {% if not live_allowed %}
+          <p class="mt-2 text-[10px] text-rose-300/70">Set LIVE_TRADING_ALLOWED=true in .env first.</p>
+          {% elif not mexc_configured %}
+          <p class="mt-2 text-[10px] text-rose-300/70">Add MEXC_API_KEY and MEXC_SECRET to .env.</p>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+
+    <div class="panel border-rose-500/20 p-5">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-rose-200">Emergency stop</h2>
+          <p class="mt-0.5 text-[11px] text-slate-500">Closes every open position at market and pauses new entries.</p>
+        </div>
+        <form method="post" action="/actions/kill" data-confirm="KILL SWITCH: close every open position at market and pause the bot?">
+          <button class="btn btn-danger" type="submit">Close all & pause</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-4">
+    <div class="panel p-5">
+      <h2 class="text-sm font-semibold text-white">Connection status</h2>
+      <div class="mt-4 space-y-3 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">Telegram bot</span>
+          <span class="badge {{ 'badge-green' if telegram_configured else 'badge-amber' }}">{{ 'configured' if telegram_configured else 'not configured' }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">MEXC API keys</span>
+          <span class="badge {{ 'badge-green' if mexc_configured else 'badge-amber' }}">{{ 'present' if mexc_configured else 'missing' }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">Live trading switch</span>
+          <span class="badge {{ 'badge-green' if live_allowed else 'badge-slate' }}">{{ 'enabled' if live_allowed else 'disabled' }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">Dashboard auth</span>
+          <span class="badge {{ 'badge-green' if env.dashboard_password else 'badge-amber' }}">{{ 'basic auth' if env.dashboard_password else 'off (local only)' }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">Database</span>
+          <span class="badge badge-slate">SQLite</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel p-5">
+      <h2 class="text-sm font-semibold text-white">Telegram setup</h2>
+      <ol class="mt-3 space-y-2 text-[11px] leading-5 text-slate-400">
+        <li><span class="text-brand-300">1.</span> Create a bot with <span class="kbd">@BotFather</span> and copy the token.</li>
+        <li><span class="text-brand-300">2.</span> Put <span class="kbd">TELEGRAM_BOT_TOKEN</span> in <span class="kbd">.env</span>.</li>
+        <li><span class="text-brand-300">3.</span> Start the app, send <span class="kbd">/id</span> to the bot.</li>
+        <li><span class="text-brand-300">4.</span> Add the chat ID above or in <span class="kbd">TELEGRAM_CHAT_ID</span>.</li>
+        <li><span class="text-brand-300">5.</span> Send <span class="kbd">/status</span> to confirm.</li>
+      </ol>
+      <div class="mt-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3 text-[11px] leading-5 text-slate-500">
+        Commands: <span class="kbd">/status</span> <span class="kbd">/positions</span> <span class="kbd">/signals</span> <span class="kbd">/pause</span> <span class="kbd">/resume</span> <span class="kbd">/kill</span> <span class="kbd">/risk 0.5</span> <span class="kbd">/report</span> <span class="kbd">/mode</span>
+      </div>
+    </div>
+
+    <div class="panel p-5">
+      <h2 class="text-sm font-semibold text-white">MEXC checklist</h2>
+      <ul class="mt-3 space-y-2 text-[11px] leading-5 text-slate-400">
+        <li class="flex gap-2"><span class="text-brand-400">✓</span> KYC completed</li>
+        <li class="flex gap-2"><span class="text-brand-400">✓</span> API key with futures trade permission</li>
+        <li class="flex gap-2"><span class="text-brand-400">✓</span> Withdrawal permission disabled</li>
+        <li class="flex gap-2"><span class="text-brand-400">✓</span> VPS IP whitelisted</li>
+        <li class="flex gap-2"><span class="text-brand-400">✓</span> Isolated margin, one-way mode</li>
+        <li class="flex gap-2"><span class="text-brand-400">✓</span> Smallest allowed size tested first</li>
+      </ul>
+    </div>
+
+    <div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-[11px] leading-5 text-amber-200/80">
+      <div class="font-semibold text-amber-200">Reality check</div>
+      Automation removes screen time, not risk. Run the backtest, then paper for weeks, then live with money you can lose. Never expose this dashboard to the internet without a password and HTTPS.
+    </div>
+  </div>
+</div>
+{% endblock %}

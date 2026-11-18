@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>{% block title %}Overview{% endblock %} · Money Machine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: { 950: "#070b12", 900: "#0b1019", 800: "#121a26" },
+            brand: { 300: "#6ee7b7", 400: "#34d399", 500: "#10b981", 600: "#059669" }
+          },
+          fontFamily: {
+            sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+            mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+  {% block head %}{% endblock %}
+  <link rel="icon" type="image/png" href="/static/favicon.ico">
+  <link rel="shortcut icon" type="image/ico" href="/static/favicon.ico">
+</head>
+<body class="min-h-screen font-sans text-slate-200 antialiased">
+<div class="min-h-screen lg:flex">
+
+  <aside class="hidden w-64 shrink-0 flex-col border-r border-slate-800/60 bg-ink-950/70 px-4 py-6 lg:flex">
+    <a href="/" class="mb-8 flex items-center gap-3 px-2">
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/15 ring-1 ring-brand-500/30">
+        <svg class="h-5 w-5 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 17l5-5 4 3 7-9" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 6h5v5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="text-sm font-bold tracking-tight text-white">MONEY MACHINE</div>
+        <div class="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">Trading control plane</div>
+      </div>
+    </a>
+
+    <nav class="space-y-1">
+      <a href="/" class="nav-link {{ 'active' if request.url.path == '/' else '' }}">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        Overview
+      </a>
+      <a href="/advanced" class="nav-link {{ 'active' if request.url.path.startswith('/advanced') else '' }}">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Command Center
+      </a>
+      <a href="/trades" class="nav-link {{ 'active' if request.url.path.startswith('/trades') else '' }}">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 5-7"/></svg>
+        Trades
+      </a>
+      <a href="/live" class="nav-link {{ 'active' if request.url.path.startswith('/live') else '' }}">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12h3l2-7 4 14 3-9 2 2h6"/></svg>
+        Live prices
+      </a>
+      <a href="/signals" class="nav-link {{ 'active' if request.url.path.startswith('/signals') else '' }}">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+        Signals
+      </a>
+      <a href="/backtest" class="nav-link {{ 'active' if request.url.path.startswith('/backtest') else '' }}">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 15l3-4 3 2 4-6"/></svg>
+        Backtest
+      </a>
+      <a href="/settings" class="nav-link {{ 'active' if request.url.path.startswith('/settings') else '' }}">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.2.5.66.85 1.2.95H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.05z"/></svg>
+        Settings
+      </a>
+    </nav>
+
+    <div class="mt-auto space-y-3 pt-8">
+      <div class="rounded-xl border border-slate-800/80 bg-slate-900/40 p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Engine</span>
+          <span class="badge {{ 'badge-amber' if settings.paused else 'badge-green' }}">
+            <span class="h-1.5 w-1.5 rounded-full {{ 'bg-amber-400' if settings.paused else 'bg-emerald-400' }}"></span>
+            {{ status_label }}
+          </span>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-xs">
+          <span class="text-slate-500">Mode</span>
+          <span class="font-semibold {{ 'text-rose-300' if not settings.paper_mode else 'text-emerald-300' }}">{{ mode_label }}</span>
+        </div>
+        <div class="mt-1.5 flex items-center justify-between text-xs">
+          <span class="text-slate-500">Risk / trade</span>
+          <span class="num text-slate-300">{{ settings.risk_pct|pct(false) }}</span>
+        </div>
+        <div class="mt-1.5 flex items-center justify-between text-xs">
+          <span class="text-slate-500">Last scan</span>
+          <span class="text-slate-400">{{ settings.last_scan_at|ago }}</span>
+        </div>
+      </div>
+      <p class="px-1 text-[10px] leading-4 text-slate-600">
+        Paper first. Backtest, then small size. No system is guaranteed to profit.
+      </p>
+    </div>
+  </aside>
+
+  <div class="min-w-0 flex-1">
+    <header class="sticky top-0 z-30 border-b border-slate-800/60 bg-ink-950/80 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-3 lg:px-8">
+        <a href="/" class="flex items-center gap-2 lg:hidden">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500/15 ring-1 ring-brand-500/30">
+            <svg class="h-4 w-4 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l5-5 4 3 7-9"/><path d="M15 6h5v5"/></svg>
+          </div>
+          <span class="text-xs font-bold tracking-wide text-white">MONEY MACHINE</span>
+        </a>
+
+        <div class="ml-auto flex items-center gap-2 sm:gap-3">
+          <span class="badge {{ 'badge-amber' if settings.paused else 'badge-green' }}">
+            <span class="h-1.5 w-1.5 rounded-full {{ 'bg-amber-400' if settings.paused else 'bg-emerald-400 animate-pulse' }}"></span>
+            <span class="hidden sm:inline">{{ status_label }}</span>
+          </span>
+          <span class="badge {{ 'badge-red' if not settings.paper_mode else 'badge-slate' }}">{{ mode_label }}</span>
+          <div class="hidden text-right sm:block">
+            <div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Equity</div>
+            <div class="num text-sm font-bold text-white">{{ snapshot.equity|money }} <span class="text-[10px] font-medium text-slate-500">USDT</span></div>
+          </div>
+
+          <!-- User auth section -->
+          {% if request.state.authenticated %}
+          <div class="flex items-center gap-3 ml-2 pl-2 border-l border-slate-800/60">
+            <div class="hidden sm:block text-right">
+              <div class="text-[10px] font-semibold text-slate-400">Signed in as</div>
+              <div class="text-xs font-medium text-white">{{ request.state.auth_subject }}</div>
+            </div>
+            <form method="post" action="/auth/logout" class="ml-1">
+              <button class="btn btn-ghost text-xs px-2.5" type="submit" title="Sign out">
+                <svg class="h-3.5 w-3.5 text-slate-400 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+              </button>
+            </form>
+          </div>
+          {% endif %}
+
+          <form method="post" action="{{ '/actions/resume' if settings.paused else '/actions/pause' }}">
+            <button class="btn {{ 'btn-primary' if settings.paused else 'btn-ghost' }}" type="submit">
+              {% if settings.paused %}Resume{% else %}Pause{% endif %}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="flex gap-1 overflow-x-auto px-3 pb-2 lg:hidden">
+        {% for label, href in [('Overview','/'), ('Command Center','/advanced'), ('Trades','/trades'), ('Live prices','/live'), ('Signals','/signals'), ('Backtest','/backtest'), ('Settings','/settings')] %}
+        <a href="{{ href }}" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold {{ 'bg-brand-500/10 text-brand-300' if request.url.path == href or (href != '/' and request.url.path.startswith(href)) else 'text-slate-400' }}">{{ label }}</a>
+        {% endfor %}
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-[1600px] px-4 py-6 lg:px-8 lg:py-8">
+      {% if flash %}
+      <div id="flash" class="mb-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm {{ 'border-rose-500/30 bg-rose-500/10 text-rose-200' if flash_level == 'error' else 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' }}">
+        <span class="mt-0.5 text-base leading-none">{{ '!' if flash_level == 'error' else '✓' }}</span>
+        <span>{{ flash }}</span>
+      </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+
+      <footer class="mt-10 border-t border-slate-800/60 pt-5 text-[11px] text-slate-600">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span>Money Machine · automated multi-timeframe SMC engine</span>
+          <span class="num">{{ now|dt }}</span>
+        </div>
+        <p class="mt-2 max-w-3xl leading-5">
+          Trading involves substantial risk. Backtest results are approximate, paper results are simulated, and live results can differ.
+          Never enable live mode until you have verified the strategy and the execution path with money you can afford to lose.
+        </p>
+      </footer>
+    </main>
+  </div>
+</div>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

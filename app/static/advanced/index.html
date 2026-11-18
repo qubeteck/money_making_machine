@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/png" href="/static/favicon.ico">
+    <title>Money Machine | Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script>
+      tailwind.config={theme:{extend:{colors:{ink:'#0b1220',panel:'#111c2e',line:'#223149',mint:'#2dd4a7',sky:'#60a5fa'}}}};
+    </script>
+    <style>
+      body{background:#080f1c;color:#e5edf8;font-family:Inter,ui-sans-serif,system-ui}
+      .panel{background:#111c2e;border:1px solid #223149;border-radius:16px}
+      .muted{color:#91a2ba}.positive{color:#2dd4a7}.negative{color:#fb7185}
+      .navitem{display:flex;gap:12px;align-items:center;padding:11px 13px;border-radius:10px;color:#9fb0c8}
+      .navitem.active,.navitem:hover{background:#1c2b42;color:#fff}
+      canvas{max-width:100%}
+      .tag{font-size:10px;letter-spacing:.08em;font-weight:800;padding:4px 7px;border-radius:6px}
+      .empty{padding:24px 0;text-align:center;color:#91a2ba;font-size:13px}
+      /* Mobile nav */
+      .mobile-nav .navitem{display:block;width:100%;padding:12px 15px;border-bottom:1px solid #223149;text-align:left}
+      .mobile-nav .navitem.active,.mobile-nav .navitem:hover{background:#1c2b42;color:#fff}
+    </style>
+  </head>
+  <body>
+    <div class="min-h-screen flex">
+      <aside class="hidden lg:flex w-64 shrink-0 border-r border-slate-800/90 p-5 flex-col">
+        <div class="flex items-center gap-3 mb-10 px-2">
+          <div class="w-10 h-10 rounded-xl bg-emerald-400 text-slate-950 grid place-items-center font-black text-xl">M</div>
+          <div><div class="font-bold tracking-wide">MONEY MACHINE</div><div class="text-xs muted">COMMAND CENTER</div></div>
+        </div>
+        <div class="text-[10px] tracking-[.2em] muted px-3 mb-3">WORKSPACE</div>
+        <nav class="space-y-1 mobile-nav">
+          <a class="navitem active" href="/">⌂ <span>Overview</span></a>
+          <a class="navitem" href="/advanced" aria-current="page">▦ <span>Command Center</span></a>
+          <a class="navitem" href="/trades">☷ <span>Trades</span></a>
+          <a class="navitem" href="/live">⚡ <span>Live prices</span></a>
+          <a class="navitem" href="/signals">⌁ <span>Signals</span></a>
+          <a class="navitem" href="/backtest">▥ <span>Backtest</span></a>
+          <a class="navitem" href="/settings">⚙ <span>Settings</span></a>
+        </nav>
+        <div class="text-[10px] tracking-[.2em] muted px-3 mt-9 mb-3">SYSTEM</div>
+        <nav class="space-y-1 mobile-nav">
+          <a class="navitem" href="/settings">⚙ <span>Settings</span></a>
+          <a class="navitem" href="/trades">☷ <span>Trade history</span></a>
+          <a class="navitem" href="/live">⚡ <span>Live prices</span></a>
+          <a class="navitem" href="/">⌂ <span>Classic dashboard</span></a>
+        </nav>
+        <div class="mt-auto panel p-4">
+          <div class="flex items-center justify-between"><span class="text-xs muted">ENGINE STATUS</span><span id="engineDot" class="w-2 h-2 rounded-full bg-emerald-400"></span></div>
+          <div id="engineStatus" class="font-semibold mt-2">Connecting…</div>
+          <div id="modeText" class="text-xs muted mt-1">—</div>
+        </div>
+      </aside>
+
+      <main class="flex-1 min-w-0">
+        <header class="border-b border-slate-800/90">
+          <div class="h-20 flex items-center justify-between px-5 md:px-8">
+            <div><div class="text-sm muted">Workspace / Command Center</div><h1 class="text-xl font-bold">Trading Overview</h1></div>
+            <div class="flex items-center gap-3">
+              <span id="modeBadge" class="tag bg-sky-400/15 text-sky-300 border border-sky-400/20">● CONNECTING</span>
+              <button id="refreshBtn" class="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800">↻ <span class="hidden sm:inline">Refresh</span></button>
+              <div class="w-9 h-9 rounded-full bg-sky-500/20 text-sky-300 grid place-items-center font-bold">MM</div>
+            </div>
+          </div>
+          <div class="flex gap-1 overflow-x-auto px-3 pb-3 lg:hidden">
+            <a href="/" class="whitespace-nowrap rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white">Overview</a>
+            <a href="/advanced" aria-current="page" class="whitespace-nowrap rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white">Command Center</a>
+            <a href="/trades" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white">Trades</a>
+            <a href="/live" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white">Live prices</a>
+            <a href="/signals" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white">Signals</a>
+            <a href="/backtest" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white">Backtest</a>
+            <a href="/settings" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white">Settings</a>
+          </div>
+        </header>
+
+        <div class="p-5 md:p-8 space-y-6">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div><h2 class="text-2xl font-bold">Live trading overview</h2><p class="muted text-sm mt-1">Real engine data from your database and MEXC market feed.</p></div>
+            <div class="flex items-center gap-2 text-xs muted"><span id="streamDot" class="w-2 h-2 rounded-full bg-amber-400"></span> <span id="streamStatus">Live stream connecting…</span> <span id="updatedAt" class="ml-2">—</span></div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div class="panel p-5"><div class="flex justify-between muted text-sm"><span>Account balance</span><span>◉</span></div><div id="balance" class="text-2xl font-bold mt-3">—</div><div class="text-xs muted mt-2">Realized account balance</div></div>
+            <div class="panel p-5"><div class="flex justify-between muted text-sm"><span>Equity</span><span>↗</span></div><div id="equity" class="text-2xl font-bold mt-3">—</div><div class="text-xs positive mt-2">Includes unrealized P&L</div></div>
+            <div class="panel p-5"><div class="flex justify-between muted text-sm"><span>Today's P&L</span><span>◷</span></div><div id="pnl" class="text-2xl font-bold mt-3">—</div><div id="pnlPct" class="text-xs muted mt-2">—</div></div>
+            <div class="panel p-5"><div class="flex justify-between muted text-sm"><span>Win rate</span><span>◎</span></div><div id="winRate" class="text-2xl font-bold mt-3">—</div><div id="winMeta" class="text-xs muted mt-2">No closed trades yet</div></div>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-4" id="analytics">
+            <section class="panel p-5 xl:col-span-2">
+              <div class="flex flex-wrap justify-between gap-3 mb-4"><div><h3 class="font-semibold">Equity performance</h3><p class="text-xs muted mt-1">Equity snapshots from the running engine</p></div><span id="equityTag" class="tag bg-sky-400/10 text-sky-300">—</span></div>
+              <div class="h-64"><canvas id="equityChart"></canvas></div>
+            </section>
+            <section class="panel p-5"><h3 class="font-semibold">Portfolio allocation</h3><p class="text-xs muted mt-1 mb-3">Open notional exposure + cash</p><div class="h-56"><canvas id="allocationChart"></canvas></div><div id="allocationLegend" class="grid grid-cols-2 gap-2 text-xs mt-3 muted"></div></section>
+          </div>
+
+          <section class="panel p-5">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+              <div><h3 class="font-semibold">Market chart</h3><p class="text-xs muted mt-1">MEXC futures candles · EMA 20 overlay</p></div>
+              <div class="flex gap-2">
+                <select id="symbolSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+                <select id="tfSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"><option>5m</option><option>15m</option><option>30m</option><option>1h</option><option>4h</option><option>8h</option><option>1d</option></select>
+              </div>
+            </div>
+            <div class="h-72"><canvas id="candleCanvas" class="w-full h-full"></canvas></div>
+            <div class="flex flex-wrap gap-4 text-xs muted mt-3"><span>━ Price</span><span class="positive">━ EMA 20</span><span class="text-sky-300">Candlestick chart</span></div>
+            <div id="candleError" class="hidden text-xs negative mt-2"></div>
+          </section>
+
+          <section id="markets" class="panel p-5">
+            <div class="flex justify-between items-center mb-4"><div><h3 class="font-semibold">Market watch</h3><p class="text-xs muted mt-1">Latest scan result per configured symbol</p></div><span id="marketCount" class="tag bg-emerald-400/10 text-emerald-300">—</span></div>
+            <div class="overflow-x-auto"><table class="w-full text-sm min-w-[700px]"><thead class="text-xs muted border-b border-slate-700"><tr><th class="text-left py-3">Instrument</th><th class="text-right">Price</th><th class="text-right">HTF trend</th><th class="text-right">Structure</th><th class="text-right">Score</th><th class="text-right">Status</th></tr></thead><tbody id="marketRows"></tbody></div>
+          </section>
+
+          <section id="positions" class="panel p-5">
+            <div class="flex justify-between items-center mb-4"><div><h3 class="font-semibold">Open positions</h3><p class="text-xs muted mt-1">Live positions from the engine</p></div><span id="positionCount" class="tag bg-sky-400/10 text-sky-300">—</span></div>
+            <div class="overflow-x-auto"><table class="w-full text-sm min-w-[800px]"><thead class="text-xs muted border-b border-slate-700"><tr><th class="text-left py-3">Market</th><th>Side</th><th>Entry</th><th>Current</th><th>Stop loss</th><th>Take profit</th><th>Risk</th><th class="text-right">P&L</th></tr></thead><tbody id="positionRows"></tbody></div>
+          </section>
+
+          <section id="signals" class="panel p-5">
+            <div class="flex justify-between items-center mb-4"><div><h3 class="font-semibold">Strategy signals</h3><p class="text-xs muted mt-1">Latest signals generated by the SMC engine</p></div><span id="signalCount" class="tag bg-violet-400/10 text-violet-300">—</span></div>
+            <div class="overflow-x-auto"><table class="w-full text-sm min-w-[750px]"><thead class="text-xs muted border-b border-slate-700"><tr><th class="text-left py-3">Time</th><th>Market</th><th>Direction</th><th>Strategy</th><th>Timeframe</th><th>Score</th><th>Status</th></tr></thead><tbody id="signalRows"></tbody></div>
+          </section>
+
+          <section id="operations" class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div class="panel p-5 xl:col-span-2">
+              <div class="flex justify-between items-center mb-4"><div><h3 class="font-semibold">Recent jobs</h3><p class="text-xs muted mt-1">Scheduled scans and reports recorded by the engine</p></div><span id="jobCount" class="tag bg-amber-400/10 text-amber-300">—</span></div>
+              <div class="overflow-x-auto"><table class="w-full text-sm min-w-[650px]"><thead class="text-xs muted border-b border-slate-700"><tr><th class="text-left py-3">Job</th><th>Started</th><th>Status</th><th class="text-right">Duration</th><th>Message</th></tr></thead><tbody id="jobRows"></tbody></div>
+            </div>
+            <div class="panel p-5">
+              <div class="flex justify-between items-center"><div><h3 class="font-semibold">Runtime</h3><p class="text-xs muted mt-1">Operational counters</p></div><span id="runtimeStatus" class="tag bg-amber-400/10 text-amber-300">—</span></div>
+              <dl class="grid grid-cols-2 gap-3 text-sm mt-4">
+                <div class="rounded-lg bg-slate-900/60 p-3"><dt class="text-xs muted">Uptime</dt><dd id="uptime" class="font-semibold mt-1">—</dd></div>
+                <div class="rounded-lg bg-slate-900/60 p-3"><dt class="text-xs muted">Job errors 24h</dt><dd id="jobErrors" class="font-semibold mt-1">—</dd></div>
+                <div class="rounded-lg bg-slate-900/60 p-3"><dt class="text-xs muted">Bot errors 24h</dt><dd id="botErrors" class="font-semibold mt-1">—</dd></div>
+                <div class="rounded-lg bg-slate-900/60 p-3"><dt class="text-xs muted">Scheduler</dt><dd id="schedulerStatus" class="font-semibold mt-1">—</dd></div>
+              </dl>
+              <button id="scanBtn" class="mt-4 rounded-lg bg-emerald-400 text-slate-950 font-semibold px-3 py-2 text-sm hover:bg-emerald-300 disabled:opacity-60">Run scan now</button>
+              <div id="scanMessage" class="text-xs muted mt-2"></div>
+            </div>
+          </section>
+          <footer class="text-center text-xs muted py-4">Money Machine command center · Live engine data · Trading involves substantial risk.</footer>
+        </div>
+      </main>
+    </div>
+    <script src="/static/advanced/js/dashboard.js"></script>
+  </body>
+</html>

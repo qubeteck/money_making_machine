@@ -1,0 +1,30 @@
+# Protect the application root when it sits under public_html on cPanel.
+#
+# Upload this as public_html/money_machine/.htaccess (next to run.py).
+# FastAPI serves everything itself; Apache should only proxy requests to the
+# Python application and never expose source code, secrets, SQLite files or
+# backups. Adjust the RewriteRule target if your Passenger/ASGI setup differs.
+
+Options -Indexes
+
+# Force HTTPS. Remove this block if cPanel's "Force HTTPS Redirect" already
+# handles it at the domain level.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# Deny sensitive files and root-level source/config files before any proxy rule.
+# /docs and /openapi.json are application routes, not files, so they still work.
+<FilesMatch "(?i)^(\.env.*|\.ht.*|dockerfile|docker-compose.*\.ya?ml|\.dockerignore|\.gitignore|run\.py|requirements.*\.txt|pyproject\.toml|alembic\.ini|readme\.md|.*\.(py|pyc|pyo|md|ini|toml|cfg|txt|yml|yaml|zip|log|bak|db|sqlite3?)(-wal|-shm)?)$">
+  Require all denied
+</FilesMatch>
+
+RedirectMatch 404 (?i)/(\.env|\.git|\.venv|app|data|migrations|tests|scripts|deploy|advanced_features)(/|$)
+
+# If your host uses Passenger/ASGI, keep the handler lines that cPanel
+# generated for the application. Do not add a passenger_wsgi.py that merely
+# imports the ASGI app; see Part 8 of
+# ADVANCED_FEATURES_AND_CPANEL_DEPLOYMENT_GUIDE.md.

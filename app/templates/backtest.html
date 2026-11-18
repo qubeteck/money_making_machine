@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Backtest{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Research lab</div>
+  <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Backtest</h1>
+  <p class="mt-1 max-w-3xl text-sm text-slate-500">
+    Replay the 4H trend / 1H structure / 15M trigger engine on MEXC history. Results are approximate: no funding, no partial fills, and stops are assumed to fill at the stop unless the candle gaps through it.
+  </p>
+</div>
+
+<div class="grid gap-4 xl:grid-cols-4">
+  <div class="panel p-4 xl:col-span-1">
+    <h2 class="text-sm font-semibold text-white">Run a test</h2>
+    <p class="mt-1 text-[11px] leading-5 text-slate-500">Keep the first tests short. 90 days of 15M candles is a useful sanity check.</p>
+    <form method="post" action="/backtest" class="mt-4 space-y-3" data-loading="true">
+      <div>
+        <label class="field-label" for="symbol">Market</label>
+        <input class="field" id="symbol" name="symbol" value="{{ form.symbol }}" placeholder="BTC/USDT" required>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label" for="days">Days</label>
+          <input class="field" id="days" name="days" type="number" min="5" max="180" value="{{ form.days }}">
+        </div>
+        <div>
+          <label class="field-label" for="starting_balance">Start balance</label>
+          <input class="field" id="starting_balance" name="starting_balance" type="number" min="10" step="10" value="{{ form.starting_balance }}">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label" for="risk_pct">Risk %</label>
+          <input class="field" id="risk_pct" name="risk_pct" type="number" min="0.05" max="5" step="0.05" value="{{ form.risk_pct }}">
+        </div>
+        <div>
+          <label class="field-label" for="leverage">Leverage</label>
+          <input class="field" id="leverage" name="leverage" type="number" min="1" max="50" value="{{ form.leverage }}">
+        </div>
+      </div>
+      <div>
+        <label class="field-label" for="min_score">Min confluence score</label>
+        <input class="field" id="min_score" name="min_score" type="number" min="0" max="100" step="1" value="{{ form.min_score }}">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label" for="fee_pct">Fee / side %</label>
+          <input class="field" id="fee_pct" name="fee_pct" type="number" min="0" max="1" step="0.01" value="{{ form.fee_pct }}">
+        </div>
+        <div>
+          <label class="field-label" for="slippage_pct">Slippage %</label>
+          <input class="field" id="slippage_pct" name="slippage_pct" type="number" min="0" max="1" step="0.01" value="{{ form.slippage_pct }}">
+        </div>
+      </div>
+      <button class="btn btn-primary w-full" type="submit">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 5v14l11-7-11-7z"/></svg>
+        Run backtest
+      </button>
+      <p class="text-center text-[10px] text-slate-600">Fetching history can take 10–30 seconds.</p>
+    </form>
+
+    <div class="mt-5 rounded-lg border border-slate-800 bg-slate-950/50 p-3 text-[11px] leading-5 text-slate-500">
+      <div class="font-semibold text-slate-400">How the simulation works</div>
+      <ul class="mt-2 space-y-1">
+        <li>• Entry at the next 15M open after a qualified close</li>
+        <li>• Stop first if a candle hits both stop and target</li>
+        <li>• 2R target, 0.35 ATR structure buffer</li>
+        <li>• Fees and slippage applied to both sides</li>
+        <li>• One position at a time</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-4 xl:col-span-3">
+    {% if error %}
+    <div class="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+      <div class="font-semibold">Backtest failed</div>
+      <p class="mt-1 text-xs text-rose-200/80">{{ error }}</p>
+    </div>
+    {% endif %}
+
+    {% if result %}
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div class="panel p-4">
+        <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Net PnL</div>
+        <div class="num mt-2 text-2xl font-bold {{ 'text-emerald-400' if result.net_pnl > 0 else ('text-rose-400' if result.net_pnl < 0 else 'text-white') }}">{{ '+' if result.net_pnl > 0 else '' }}{{ result.net_pnl|money }}</div>
+        <div class="mt-1 text-[11px] text-slate-500">USDT</div>
+      </div>
+      <div class="panel p-4">
+        <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Return</div>
+        <div class="num mt-2 text-2xl font-bold {{ 'text-emerald-400' if result.return_pct > 0 else ('text-rose-400' if result.return_pct < 0 else 'text-white') }}">{{ result.return_pct|pct }}</div>
+        <div class="mt-1 text-[11px] text-slate-500">Final {{ result.final_equity|money }}</div>
+      </div>
+      <div class="panel p-4">
+        <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Win rate</div>
+        <div class="num mt-2 text-2xl font-bold text-white">{{ result.win_rate|pct(false) }}</div>
+        <div class="mt-1 text-[11px] text-slate-500">{{ result.wins }}W · {{ result.losses }}L</div>
+      </div>
+      <div class="panel p-4">
+        <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Profit factor</div>
+        <div class="num mt-2 text-2xl font-bold text-white">{{ '∞' if result.profit_factor >= 999 else '%.2f'|format(result.profit_factor) }}</div>
+        <div class="mt-1 text-[11px] text-slate-500">Avg {{ '%+.2f'|format(result.avg_r) }}R</div>
+      </div>
+      <div class="panel p-4">
+        <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Trades</div>
+        <div class="num mt-2 text-2xl font-bold text-white">{{ result.trades }}</div>
+        <div class="mt-1 text-[11px] text-slate-500">{{ result.candles }} candles</div>
+      </div>
+      <div class="panel p-4">
+        <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Max drawdown</div>
+        <div class="num mt-2 text-2xl font-bold text-white">{{ result.max_drawdown_pct|pct(false) }}</div>
+        <div class="mt-1 text-[11px] text-slate-500">Peak to trough</div>
+      </div>
+      <div class="panel p-4">
+        <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Expectancy</div>
+        <div class="num mt-2 text-2xl font-bold text-white">{{ result.expectancy|money }}</div>
+        <div class="mt-1 text-[11px] text-slate-500">USDT / trade</div>
+      </div>
+      <div class="panel p-4">
+        <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Period</div>
+        <div class="num mt-2 text-lg font-bold text-white">{{ result.days }}d</div>
+        <div class="mt-1 text-[11px] text-slate-500">{{ result.data_start|dt }} → {{ result.data_end|dt }}</div>
+      </div>
+    </div>
+
+    {% if result.warnings %}
+    <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+      {% for warning in result.warnings %}<div>{{ warning }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="panel p-4">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-sm font-semibold text-white">Simulated equity</h2>
+          <p class="mt-0.5 text-[11px] text-slate-500">{{ result.symbol|symbol }} · {{ result.trades }} closed trades · {{ mode_label }} settings</p>
+        </div>
+        <span class="badge {{ 'badge-green' if result.net_pnl >= 0 else 'badge-red' }}">{{ result.return_pct|pct }}</span>
+      </div>
+      <div class="chart-wrap-sm"><canvas id="backtestChart"></canvas></div>
+    </div>
+
+    <div class="panel overflow-hidden">
+      <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3.5">
+        <h2 class="text-sm font-semibold text-white">Trades</h2>
+        <span class="badge badge-slate">{{ result.trade_list|length }} simulated</span>
+      </div>
+      {% if result.trade_list %}
+      <div class="max-h-[520px] overflow-auto">
+        <table class="data-table">
+          <thead class="sticky top-0 bg-ink-950/95 backdrop-blur">
+            <tr>
+              <th>Opened</th>
+              <th>Side</th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th>Stop</th>
+              <th>Target</th>
+              <th>Qty</th>
+              <th>PnL</th>
+              <th>R</th>
+              <th>Reason</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for trade in result.trade_list|reverse %}
+            <tr>
+              <td class="whitespace-nowrap text-slate-500">{{ trade.opened_at|dt }}</td>
+              <td><span class="badge {{ 'badge-green' if trade.side == 'long' else 'badge-red' }}">{{ trade.side }}</span></td>
+              <td class="num text-slate-300">{{ trade.entry|price }}</td>
+              <td class="num text-slate-200">{{ trade.exit|price }}</td>
+              <td class="num text-rose-300/80">{{ trade.stop|price }}</td>
+              <td class="num text-emerald-300/80">{{ trade.take_profit|price }}</td>
+              <td class="num text-slate-400">{{ '%.6g'|format(trade.qty) }}</td>
+              <td class="num font-semibold {{ 'text-emerald-400' if trade.pnl > 0 else 'text-rose-400' }}">{{ '+' if trade.pnl > 0 else '' }}{{ trade.pnl|money }}</td>
+              <td class="num {{ 'text-emerald-400' if trade.r_multiple > 0 else 'text-rose-400' }}">{{ '%+.2f'|format(trade.r_multiple) }}</td>
+              <td class="text-[11px] text-slate-500">{{ trade.reason }}</td>
+              <td class="num text-slate-400">{{ trade.score|round|int }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="px-4 py-12 text-center text-sm text-slate-500">No trades were generated in this period. Try a longer window or a lower score threshold.</div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if result %}
+<script>
+  window.BACKTEST_CURVE = {{ curve_json|safe }};
+</script>
+{% endif %}
+{% endblock %}

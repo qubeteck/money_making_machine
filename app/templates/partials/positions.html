@@ -1,0 +1,69 @@
+<div class="panel overflow-hidden">
+  <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3.5">
+    <div>
+      <h2 class="text-sm font-semibold text-white">Open positions</h2>
+      <p class="mt-0.5 text-[11px] text-slate-500">Stops and targets are monitored by the engine every scan.</p>
+    </div>
+    <span class="badge badge-slate">{{ enriched_positions|length }}</span>
+  </div>
+
+  {% if enriched_positions %}
+  <div class="overflow-x-auto">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Market</th>
+          <th>Side</th>
+          <th>Qty</th>
+          <th>Entry</th>
+          <th>Mark</th>
+          <th>Stop</th>
+          <th>Target</th>
+          <th>uPnL</th>
+          <th>Mode</th>
+          <th>Age</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in enriched_positions %}
+        {% set trade = row.trade %}
+        <tr>
+          <td>
+            <div class="font-semibold text-white">{{ trade.symbol|symbol }}</div>
+            <div class="text-[10px] text-slate-500">#{{ trade.id }}</div>
+          </td>
+          <td>
+            <span class="badge {{ 'badge-green' if trade.side == 'long' else 'badge-red' }}">{{ trade.side }}</span>
+          </td>
+          <td class="num text-slate-300">{{ trade.qty }}</td>
+          <td class="num text-slate-300">{{ trade.entry|price }}</td>
+          <td class="num text-white">{{ row.price|price }}</td>
+          <td class="num text-rose-300">{{ trade.stop|price }}</td>
+          <td class="num text-emerald-300">{{ trade.take_profit|price }}</td>
+          <td class="num {{ 'text-emerald-400' if row.upnl > 0 else ('text-rose-400' if row.upnl < 0 else 'text-slate-300') }}">
+            {{ '+' if row.upnl > 0 else '' }}{{ row.upnl|money }}
+            <div class="text-[10px] text-slate-500">{{ row.upnl_pct|pct }}</div>
+          </td>
+          <td><span class="badge {{ 'badge-red' if trade.mode == 'live' else 'badge-slate' }}">{{ trade.mode }}</span></td>
+          <td class="text-slate-500">{{ trade.opened_at|ago }}</td>
+          <td class="text-right">
+            <form method="post" action="/actions/close/{{ trade.id }}" data-confirm="Close {{ trade.side }} {{ trade.symbol|symbol }} at market?">
+              <button type="submit" class="text-[11px] font-semibold text-rose-300 hover:text-rose-200">Close</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-4 py-10 text-center">
+    <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-slate-800 bg-slate-900/60">
+      <svg class="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+    </div>
+    <p class="mt-3 text-sm font-medium text-slate-400">No open positions</p>
+    <p class="mt-1 text-xs text-slate-600">The engine is waiting for a qualified multi-timeframe setup.</p>
+  </div>
+  {% endif %}
+</div>

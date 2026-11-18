@@ -1,0 +1,41 @@
+<div class="panel overflow-hidden">
+  <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3.5">
+    <div>
+      <h2 class="text-sm font-semibold text-white">Latest signals</h2>
+      <p class="mt-0.5 text-[11px] text-slate-500">Only setups that passed the trend + structure + trigger gates.</p>
+    </div>
+    <a href="/signals" class="text-[11px] font-semibold text-brand-300 hover:text-brand-200">View all →</a>
+  </div>
+
+  {% if signal_rows %}
+  <div class="divide-y divide-slate-800/60">
+    {% for row in signal_rows %}
+    {% set signal = row.signal %}
+    <div class="px-4 py-3">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="badge {{ 'badge-green' if signal.side == 'long' else 'badge-red' }}">{{ signal.side }}</span>
+          <span class="text-sm font-semibold text-white">{{ signal.symbol|symbol }}</span>
+        </div>
+        <span class="num text-xs font-bold text-slate-300">{{ signal.score|round|int }}/100</span>
+      </div>
+      <div class="score-bar mt-2"><span style="width: {{ signal.score }}%"></span></div>
+      <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+        <span>Entry <span class="num text-slate-300">{{ signal.entry|price }}</span></span>
+        <span>SL <span class="num text-rose-300">{{ signal.stop|price }}</span></span>
+        <span>TP <span class="num text-emerald-300">{{ signal.take_profit|price }}</span></span>
+        <span class="ml-auto">{{ signal.created_at|ago }}</span>
+      </div>
+      {% if signal.status != 'executed' %}
+      <div class="mt-1 text-[10px] uppercase tracking-wide text-amber-400/80">{{ signal.status }}{% if signal.reject_reason %} · {{ signal.reject_reason }}{% endif %}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="px-4 py-10 text-center">
+    <p class="text-sm font-medium text-slate-400">No qualified signals yet</p>
+    <p class="mt-1 text-xs text-slate-600">Scan results below show exactly where the engine is waiting.</p>
+  </div>
+  {% endif %}
+</div>
