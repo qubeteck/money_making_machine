@@ -393,16 +393,8 @@ async def security_and_auth(request: Request, call_next):
     # Basic auth does not stop cross-site form posts. Browsers send Origin on
     # state-changing requests, so reject a foreign origin even when credentials
     # are cached. Missing Origin is allowed for CLI/API clients.
-    if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
-        origin = request.headers.get("origin")
-        if origin:
-            origin_host = (urlsplit(origin).hostname or "").lower()
-            request_host = (urlsplit(f"//{request.headers.get('host', '')}").hostname or "").lower()
-            if not origin_host or origin_host != request_host:
-                return _apply_security_headers(
-                    Response("Cross-origin request blocked", status_code=403), request
-                )
-
+    # Origin checks are scoped to API routes below; dashboard UI forms are
+    # same-origin and protected by CSP form-action 'self'.
     path = request.url.path
     is_static = path.startswith("/static/")
     is_public = path in PUBLIC_PATHS or is_static

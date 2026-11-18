@@ -3,61 +3,94 @@
 {% block title %}Telegram Login · Money Machine{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto py-12 px-4 sm:px-6 lg:px-8">
-  <div class="panel p-8 mx-auto">
-    <div class="text-center mb-8">
-      <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/15 ring-1 ring-brand-500/30 mx-auto mb-4">
-        <svg class="h-6 w-6 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-        </svg>
+<div class="max-w-lg mx-auto py-12 px-4 sm:px-6 lg:px-8">
+  <div class="panel p-8 mx-auto relative overflow-hidden">
+    <!-- Decorative glow -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 -top-24 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-0 right-0 -translate-x-1/2 translate-y-24 w-80 h-80 bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="text-center mb-8 z-10">
+      <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-500/15 ring-1 ring-brand-500/30 mx-auto mb-6 shadow-lg shadow-brand-500/20">
+        <img src="/public/logo.png" alt="Money Machine" class="h-10 w-10 object-contain">
       </div>
-      <h2 class="text-2xl font-bold tracking-tight text-white">Telegram Login</h2>
-      <p class="mt-2 text-sm text-slate-500">Sign in using your Telegram chat ID. A verification code will be sent to your Telegram bot.</p>
+      <h2 class="text-3xl font-bold tracking-tight text-white mb-2">Telegram Login</h2>
+      <p class="text-slate-400">Sign in using your Telegram chat ID</p>
     </div>
 
-    <div class="space-y-4">
-      <div class="border border-slate-800/60 rounded-xl p-4 bg-slate-900/40">
-        <h3 class="text-sm font-semibold text-white mb-3">Step 1: Get your Chat ID</h3>
-        <ol class="text-[11px] leading-6 text-slate-400 space-y-2">
+    <div id="telegram-error" class="hidden mb-6 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 shadow-sm z-10"></div>
+
+    <div class="space-y-5 z-10">
+      <div class="border border-slate-800/60 rounded-xl p-5 bg-slate-900/40">
+        <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <svg class="h-4 w-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          Step 1: Get your Chat ID
+        </h3>
+        <ol class="text-[11px] leading-6 text-slate-400 space-y-2 list-decimal list-inside">
           <li>Open Telegram and search for your bot</li>
-          <li>Send <span class="kbd">/id</span> to the bot</li>
+          <li>Send <span class="kbd font-mono">/id</span> to the bot</li>
           <li>Copy the numeric chat ID it replies with</li>
         </ol>
       </div>
 
-      <form method="post" action="/auth/telegram/request-code" class="space-y-4" id="telegramCodeForm">
+      <form id="telegramCodeForm" class="space-y-4" data-ajax="true">
         <input type="hidden" name="action" value="login">
         <div>
           <label class="field-label" for="chat_id">Telegram Chat ID</label>
-          <input class="field" id="chat_id" name="chat_id" type="text" required placeholder="e.g. 5915437194">
+          <div class="relative">
+            <input class="field pl-10" id="chat_id" name="chat_id" type="text" required placeholder="e.g. 5915437194">
+            <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.2a2 2 0 012 2v-.5a2 2 0 012-2h2a2 2 0 012 2v.5a2 2 0 012 2v3a2 2 0 01-2 2h-1v3a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2zM3 12a2 2 0 012-2h3.2a2 2 0 012 2v-.5a2 2 0 012-2h2a2 2 0 012 2v.5a2 2 0 012 2v3a2 2 0 01-2 2h-1v3a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2z"></path></svg>
+            </div>
+          </div>
+          <p class="mt-1 text-[10px] text-slate-500">Send <span class="kbd font-mono">/id</span> to your Telegram bot to get this number</p>
         </div>
         <div>
-          <button class="btn btn-primary w-full" type="submit" id="requestCodeBtn">Send Verification Code</button>
+          <button class="btn btn-primary w-full py-3 text-sm font-bold" type="submit" id="requestCodeBtn">
+            <span id="requestCodeBtnText">Send Verification Code</span>
+          </button>
         </div>
       </form>
 
-      <div id="codeVerifySection" class="hidden space-y-4 border-t border-slate-800/60 pt-4">
-        <form method="post" action="/auth/telegram/verify-code" class="space-y-4">
+      <div id="codeVerifySection" class="hidden space-y-5 border-t border-slate-800/60 pt-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-0.5 flex-1 bg-slate-800/60"></div>
+          <span class="px-2 text-[10px] font-semibold text-brand-400 uppercase tracking-wider">Step 2: Verify Code</span>
+          <div class="h-0.5 flex-1 bg-slate-800/60"></div>
+        </div>
+        <form id="verifyCodeForm" class="space-y-4" data-ajax="true">
           <input type="hidden" name="chat_id" id="verifyChatId">
           <div>
             <label class="field-label" for="code">Verification Code</label>
-            <input class="field" id="code" name="code" type="text" required maxlength="6" placeholder="123456">
+            <div class="relative">
+              <input class="field pl-10 text-center font-mono text-sm tracking-widest text-brand-400" id="code" name="code" type="text" required maxlength="6" placeholder="123456">
+              <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+              </div>
+            </div>
+            <p class="mt-1 text-[10px] text-slate-500">Check your Telegram bot for the 6-digit code</p>
           </div>
           <div>
-            <button class="btn btn-primary w-full" type="submit">Verify & Sign In</button>
+            <button class="btn btn-primary w-full py-3 text-sm font-bold" type="submit" id="verifyBtn">
+              <span id="verifyBtnText">Verify & Sign In</span>
+            </button>
           </div>
         </form>
       </div>
 
-      <div class="text-center">
-        <a href="/auth/register" class="text-sm text-slate-400 hover:text-white">Don't have an account? Register with email/password</a>
+      <div class="text-center mt-6">
+        <a href="/auth/register" class="text-sm text-slate-400 hover:text-brand-300">Don't have an account? Register with email/password</a>
       </div>
-      <div class="text-center mt-4">
-        <a href="/auth/login" class="text-sm text-slate-400 hover:text-white">Back to regular login</a>
+      <div class="text-center">
+        <a href="/auth/login" class="text-sm text-slate-400 hover:text-brand-300">Back to regular login</a>
       </div>
     </div>
+
+    <p class="mt-8 text-center text-[10px] text-slate-600">
+      The verification code is sent by your Money Machine Telegram bot and expires in 5 minutes.
+    </p>
   </div>
 </div>
+{% endblock %}
 
 {% block scripts %}
 <script>
@@ -65,14 +98,19 @@
   const verifySection = document.getElementById("codeVerifySection");
   const verifyChatId = document.getElementById("verifyChatId");
   const requestBtn = document.getElementById("requestCodeBtn");
+  const requestBtnText = document.getElementById("requestCodeBtnText");
+  const errorEl = document.getElementById("telegram-error");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    errorEl.classList.add("hidden");
+    errorEl.textContent = "";
+
     const chatId = document.getElementById("chat_id").value.trim();
     if (!chatId) return;
 
     requestBtn.disabled = true;
-    requestBtn.textContent = "Sending…";
+    requestBtnText.textContent = "Sending…";
 
     try {
       const response = await fetch("/auth/telegram/request-code", {
@@ -83,6 +121,7 @@
           "Accept": "application/json",
         },
         body: new URLSearchParams({ chat_id: chatId, action: "login" }),
+        credentials: "same-origin",
       });
       const result = await response.json();
 
@@ -91,13 +130,58 @@
         verifySection.classList.remove("hidden");
         verifySection.scrollIntoView({ behavior: "smooth" });
       } else {
-        alert(result.error || "Failed to send code");
+        errorEl.textContent = result.error || "Failed to send code";
+        errorEl.classList.remove("hidden");
+        requestBtn.disabled = false;
+        requestBtnText.textContent = "Send Verification Code";
       }
     } catch (err) {
-      alert("Network error. Please try again.");
-    } finally {
+      errorEl.textContent = "Network error. Please try again.";
+      errorEl.classList.remove("hidden");
       requestBtn.disabled = false;
-      requestBtn.textContent = "Send Verification Code";
+      requestBtnText.textContent = "Send Verification Code";
+    }
+  });
+
+  // Verify code form
+  const verifyForm = document.getElementById("verifyCodeForm");
+  const verifyBtn = document.getElementById("verifyBtn");
+  const verifyBtnText = document.getElementById("verifyBtnText");
+
+  verifyForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const chatId = document.getElementById("verifyChatId").value;
+    const code = document.getElementById("code").value;
+
+    verifyBtn.disabled = true;
+    verifyBtnText.textContent = "Verifying…";
+
+    try {
+      const response = await fetch("/auth/telegram/verify-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Requested-With": "XMLHttpRequest",
+          "Accept": "application/json",
+        },
+        body: new URLSearchParams({ chat_id: chatId, code }),
+        credentials: "same-origin",
+      });
+      const result = await response.json();
+
+      if (result.ok) {
+        window.location.href = "/";
+      } else {
+        errorEl.textContent = result.error || "Verification failed";
+        errorEl.classList.remove("hidden");
+        verifyBtn.disabled = false;
+        verifyBtnText.textContent = "Verify & Sign In";
+      }
+    } catch (err) {
+      errorEl.textContent = "Network error. Please try again.";
+      errorEl.classList.remove("hidden");
+      verifyBtn.disabled = false;
+      verifyBtnText.textContent = "Verify & Sign In";
     }
   });
 </script>

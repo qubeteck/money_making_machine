@@ -70,27 +70,36 @@ async def register(
     db: Session = Depends(get_db),
 ):
     """Register a new user account (database-only credentials)."""
-    form = await request.form()
-    username = str(form.get("username", "")).strip()
-    email = str(form.get("email", "")).strip() or None
-    password = str(form.get("password", ""))
-    confirm_password = str(form.get("confirm_password", ""))
+    is_ajax = (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "")
+    )
+
+    if is_ajax:
+        body = await request.json()
+        username = str(body.get("username", "")).strip()
+        email = str(body.get("email", "")).strip() or None
+        password = str(body.get("password", ""))
+        confirm_password = str(body.get("confirm_password", ""))
+    else:
+        form = await request.form()
+        username = str(form.get("username", "")).strip()
+        email = str(form.get("email", "")).strip() or None
+        password = str(form.get("password", ""))
+        confirm_password = str(form.get("confirm_password", ""))
 
     if not username or not password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username and password are required",
-        )
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Username and password are required"}, status_code=400)
+        raise HTTPException(status_code=400, detail="Username and password are required")
     if password != confirm_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Passwords do not match",
-        )
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Passwords do not match"}, status_code=400)
+        raise HTTPException(status_code=400, detail="Passwords do not match")
     if len(password) < 6:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 6 characters",
-        )
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Password must be at least 6 characters"}, status_code=400)
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
     # Check if user already exists
     existing_user = db.query(User).filter(
@@ -98,6 +107,8 @@ async def register(
     ).first()
 
     if existing_user:
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Username or email already registered"}, status_code=409)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Username or email already registered",
@@ -128,6 +139,15 @@ async def register(
     # Auto-login after registration
     token = create_session(user.id)
 
+    if is_ajax:
+        return JSONResponse(
+            {"ok": True, "message": "Account created successfully", "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+            }}
+        )
+
     response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(
         key="money_machine_token",
@@ -147,14 +167,26 @@ async def login(
     db: Session = Depends(get_db),
 ):
     """Authenticate a user with username/password and create a session."""
-    form = await request.form()
-    username = str(form.get("username", "")).strip()
-    password = str(form.get("password", ""))
+    is_ajax = (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "")
+    )
+
+    if is_ajax:
+        body = await request.json()
+        username = str(body.get("username", "")).strip()
+        password = str(body.get("password", ""))
+    else:
+        form = await request.form()
+        username = str(form.get("username", "")).strip()
+        password = str(form.get("password", ""))
 
     # Find user by username
     user = db.query(User).filter(User.username == username).first()
 
     if not user:
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Incorrect username or password"}, status_code=401)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -163,6 +195,8 @@ async def login(
 
     # Verify password
     if not verify_password(password, user.hashed_password):
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Incorrect username or password"}, status_code=401)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -171,6 +205,8 @@ async def login(
 
     # Check if user is active
     if not user.is_active:
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "User account is disabled"}, status_code=401)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User account is disabled",
@@ -192,6 +228,15 @@ async def login(
     # Update last login
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
+
+    if is_ajax:
+        return JSONResponse(
+            {"ok": True, "message": "Signed in successfully", "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+            }}
+        )
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -313,28 +358,48 @@ async def telegram_verify_code(
     db: Session = Depends(get_db),
 ):
     """Verify Telegram code and login/register the user."""
-    form = await request.form()
-    chat_id_raw = str(form.get("chat_id", "")).strip()
-    code = str(form.get("code", "")).strip()
+    is_ajax = (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "")
+    )
+
+    if is_ajax:
+        body = await request.json()
+        chat_id_raw = str(body.get("chat_id", "")).strip()
+        code = str(body.get("code", "")).strip()
+    else:
+        form = await request.form()
+        chat_id_raw = str(form.get("chat_id", "")).strip()
+        code = str(form.get("code", "")).strip()
 
     if not chat_id_raw or not code:
-        return JSONResponse({"ok": False, "error": "Chat ID and code are required"}, status_code=400)
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Chat ID and code are required"}, status_code=400)
+        raise HTTPException(status_code=400, detail="Chat ID and code are required")
 
     try:
         chat_id = int(chat_id_raw)
     except ValueError:
-        return JSONResponse({"ok": False, "error": "Invalid chat ID"}, status_code=400)
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Invalid chat ID"}, status_code=400)
+        raise HTTPException(status_code=400, detail="Invalid chat ID")
 
     pending = _pending_telegram.get(chat_id)
     if not pending:
-        return JSONResponse({"ok": False, "error": "No pending verification. Request a code first."}, status_code=400)
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "No pending verification. Request a code first."}, status_code=400)
+        raise HTTPException(status_code=400, detail="No pending verification. Request a code first.")
 
     if datetime.now(timezone.utc).timestamp() > pending["expires_at"]:
         _pending_telegram.pop(chat_id, None)
-        return JSONResponse({"ok": False, "error": "Verification code expired. Request a new one."}, status_code=400)
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Verification code expired. Request a new one."}, status_code=400)
+        raise HTTPException(status_code=400, detail="Verification code expired. Request a new one.")
 
     if pending["code"] != code:
-        return JSONResponse({"ok": False, "error": "Invalid verification code"}, status_code=400)
+        if is_ajax:
+            return JSONResponse({"ok": False, "error": "Invalid verification code"}, status_code=400)
+        raise HTTPException(status_code=400, detail="Invalid verification code")
 
     action = pending["action"]
 
@@ -342,7 +407,9 @@ async def telegram_verify_code(
         user = db.query(User).filter(User.telegram_chat_id == str(chat_id)).first()
         if not user:
             _pending_telegram.pop(chat_id, None)
-            return JSONResponse({"ok": False, "error": "User not found"}, status_code=404)
+            if is_ajax:
+                return JSONResponse({"ok": False, "error": "User not found"}, status_code=404)
+            raise HTTPException(status_code=404, detail="User not found")
     else:
         # Register new user via Telegram
         username = f"tg_{chat_id}"
@@ -379,8 +446,13 @@ async def telegram_verify_code(
 
     # Create session
     token = create_session(user.id)
-    response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-    response.set_cookie(
+
+    if is_ajax:
+        _pending_telegram.pop(chat_id, None)
+        return JSONResponse({"ok": True, "message": "Verified and signed in"})
+
+    redirect_response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    redirect_response.set_cookie(
         key="money_machine_token",
         value=token,
         httponly=True,
@@ -388,9 +460,8 @@ async def telegram_verify_code(
         samesite="lax",
         max_age=60 * 60 * 24 * 30,
     )
-
     _pending_telegram.pop(chat_id, None)
-    return response
+    return redirect_response
 
 
 @router.post("/telegram/link")
