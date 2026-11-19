@@ -1,5 +1,10 @@
 # Original strategy notes
 
+> **Historical research notes.** These are the early design notes, not the
+> authoritative description of the running system. See
+> [`SYSTEMS_DOCUMENTATION.md`](SYSTEMS_DOCUMENTATION.md) for the implemented
+> strategy, risk rules, calendar guidance, and current limitations.
+
 Common Core strategy
 
 - Trend-Following Strategies: Using tools like Moving Averages (20/50/200 SMA/EMA),

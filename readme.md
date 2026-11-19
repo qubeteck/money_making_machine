@@ -4,9 +4,9 @@ Repository: <https://github.com/qubeteck/money_making_machine>
 
 A self-hosted, Telegram-controlled **MEXC USDT-perpetual** trading bot with:
 - A **Python trading engine** (FastAPI + APScheduler)
-- A **Next.js-free dashboard**: server-rendered Jinja2 HTML + Tailwind CSS + HTMX + Chart.js
-- A **live Command Center** at `/advanced` with Server-Sent Events, equity/allocation charts, market scans, positions, signals and MEXC candles
-- **Token auth** (`/auth/token`), optional API bearer token, rate limiting, security headers and structured job-run tracking
+- A **React dashboard** at `/ui` (Vite, Tailwind CSS, Recharts) plus the legacy Jinja2/HTMX dashboard at `/`
+- A **live Command Center** at `/ui/command-center` and `/advanced` with Server-Sent Events, equity/allocation charts, market scans, positions, signals and MEXC candles
+- **Session auth** (password/email registration, Telegram code, Telegram Login Widget, optional Google OAuth), token auth (`/auth/token`), optional API bearer token, rate limiting, security headers and structured job-run tracking
 - **SQLite** trade journal (signals, trades, equity snapshots, logs, job runs)
 - **Telegram control plane** (aiogram): status, positions, signals, pause/resume, risk changes, kill switch, live-mode arming
 - **Multi-timeframe confluence strategy**: 4H trend filter → 1H structure → 15M execution trigger
@@ -15,6 +15,8 @@ A self-hosted, Telegram-controlled **MEXC USDT-perpetual** trading bot with:
 - **Docker, CI smoke tests and a SQLite backup script** for repeatable operations
 
 > **No bot can guarantee that it will make money while you sleep.** Markets can gap, exchanges can go down, APIs can change, and a backtest is not a promise. The only responsible path is: backtest → paper trade for weeks → live with the smallest size → scale slowly.
+
+> **Full system, strategy, and calendar documentation:** [`docs/SYSTEMS_DOCUMENTATION.md`](docs/SYSTEMS_DOCUMENTATION.md)
 
 ---
 
@@ -869,21 +871,25 @@ money_making_machine/
 │  │  ├─ notify.py            # thread-safe Telegram bridge
 │  │  └─ telegram_bot.py      # aiogram commands
 │  ├─ routers/
-│  │  ├─ dashboard.py         # HTML pages + actions
+│  │  ├─ dashboard.py         # legacy HTML pages + actions
 │  │  ├─ api.py               # JSON API
-│  │  ├─ auth.py              # /auth/token JWT issuance
-│  │  ├─ ai.py                # /api/v1/signals/ai LLM endpoint (placeholder)
+│  │  ├─ auth.py              # sessions, registration, Telegram, Google OAuth
+│  │  ├─ ui_api.py            # dashboard actions and live data for the React SPA
 │  │  ├─ compat.py            # public /v1/models discovery stub
 │  │  ├─ versioned_api.py     # /api/v1 endpoints, settings, jobs, metrics, /me, tickers
 │  │  ├─ advanced_dashboard.py# Command Center + SSE + candles
 │  │  └─ live.py              # /live page + /ws/prices WebSocket
-│  ├─ templates/              # Jinja2 + Tailwind UI
+│  ├─ spa.py                  # serves web/dist at /ui
+│  ├─ templates/              # legacy Jinja2 + Tailwind UI
 │  └─ static/                 # app.js, styles.css, advanced/, live/
+├─ web/                       # React 19 + Vite dashboard (built to web/dist)
 ├─ tests/                     # pytest smoke tests
 ├─ migrations/                # Alembic environment + versions
 ├─ alembic.ini
 ├─ data/                      # SQLite (gitignored)
-├─ docs/strategy-notes.md     # original strategy notes
+├─ docs/
+│  ├─ SYSTEMS_DOCUMENTATION.md # current systems, strategy, risk, calendar guide
+│  └─ strategy-notes.md        # original design notes
 ├─ scripts/                   # smoke checks + backup_db.py
 ├─ .github/workflows/ci.yml   # lint + audit + migrations + tests
 ├─ Dockerfile
