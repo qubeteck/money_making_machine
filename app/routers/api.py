@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
@@ -113,10 +114,25 @@ async def signals(limit: int = 20):
                     "take_profit": row.take_profit,
                     "status": row.status,
                     "reasons": row.reasons.splitlines(),
+                    "rr": row.rr,
+                    "components": _components(row.components),
+                    "reject_reason": row.reject_reason or "",
+                    "htf_trend": row.htf_trend or "neutral",
+                    "trend_timeframe": row.trend_timeframe,
+                    "structure_timeframe": row.structure_timeframe,
+                    "entry_timeframe": row.entry_timeframe,
                 }
                 for row in rows
             ]
         }
+
+
+def _components(raw: str | None) -> dict[str, float]:
+    try:
+        value = json.loads(raw or "{}")
+        return {str(key): float(points) for key, points in value.items()}
+    except Exception:
+        return {}
 
 
 @router.get("/logs", response_model=LogsResponse)

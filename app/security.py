@@ -190,24 +190,32 @@ def verify_session_token(token: str) -> bool:
         return False
 
 
+def _jwt_secret(env=None) -> str:
+    env = env or get_settings()
+    raw = getattr(env, "jwt_secret", "") or getattr(env, "dashboard_password", "")
+    if hasattr(raw, "get_secret_value"):
+        raw = raw.get_secret_value()
+    return str(raw or "")
+
+
 def authenticate_bearer(token: str, env) -> tuple | None:
     """Authenticate a Bearer token and return (method, subject, claims).
 
-    Args:
-        token: The Bearer token string
-        env: Settings/env containing JWT_SECRET
-
-    Returns:
-        Tuple of (method, subject, claims) if valid, None otherwise
+    Accepts either the static API_TOKEN or a signed JWT. The API token is
+    checked first so machine clients do not need a username/password exchange.
     """
     if not token:
         return None
+
+    api_token = str(getattr(env, "api_token", "") or "")
+    if api_token and secrets.compare_digest(token, api_token):
+        return ("api_token", "api-token", {})
+
+    secret = _jwt_secret(env)
+    if not secret:
+        return None
     try:
-        payload = jwt.decode(
-            token,
-            settings.jwt_secret.get_secret_value() if hasattr(settings.jwt_secret, "get_secret_value") else settings.jwt_secret,
-            algorithms=["HS256"],
-        )
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
         subject: str = payload.get("sub")
         method: str = payload.get("method", "jwt")
         claims: dict = dict(payload) if payload else {}
@@ -218,28 +226,27 @@ def authenticate_bearer(token: str, env) -> tuple | None:
         return None
 
 
-def create_access_token(subject: str, method: str = "jwt", expires_minutes: int | None = None) -> str:
-    """Create a JWT access token.
-
-    Args:
-        subject: The subject/username to embed in the token
-        method: Authentication method label
-        expires_minutes: Override default expiry; None uses settings value
-
-    Returns:
-        Encoded JWT string
-    """
+def create_access_token(
+    subject: str,
+    method: str = "jwt",
+    expires_minutes: int | None = None,
+    env=None,
+) -> str:
+    """Create a short-lived JWT signed with JWT_SECRET (or the dashboard password)."""
     if expires_minutes is None:
-        expires_minutes = getattr(settings, "jwt_expires_minutes", 30)
+        env = env or get_settings()
+        expires_minutes = int(getattr(env, "jwt_expiry_minutes", 60) or 60)
+    secret = _jwt_secret(env)
+    if not secret:
+        raise ValueError("JWT_SECRET or DASHBOARD_PASSWORD must be configured")
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
-    token = jwt.encode(
+    return jwt.encode(
         {
             "sub": subject,
             "method": method,
             "exp": expires_at,
             "iat": datetime.now(timezone.utc),
         },
-        settings.jwt_secret.get_secret_value() if hasattr(settings.jwt_secret, "get_secret_value") else settings.jwt_secret,
+        secret,
         algorithm="HS256",
     )
-    return token

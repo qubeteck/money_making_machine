@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
-from sqlalchemy import func, select, and_
+from sqlalchemy import func, select
 
 from app.config import BASE_DIR, get_settings
 from app.db import session_scope

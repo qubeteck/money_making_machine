@@ -29,6 +29,15 @@ init_db()
 client = TestClient(app)
 
 
+def _ws_message_of_type(websocket, kind: str) -> dict:
+    """Ignore the initial handshake and return the first message of *kind*."""
+    for _ in range(5):
+        message = websocket.receive_json()
+        if message.get("type") == kind:
+            return message
+    raise AssertionError(f"WebSocket did not send a {kind!r} message")
+
+
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_database():
     yield
@@ -307,8 +316,7 @@ def test_ws_token_endpoint_without_auth() -> None:
 
 def test_price_websocket_streams_ticker() -> None:
     with client.websocket_connect("/ws/prices") as websocket:
-        message = websocket.receive_json()
-    assert message["type"] == "ticker"
+        message = _ws_message_of_type(websocket, "ticker")
     assert isinstance(message["tickers"], list)
     assert message["interval_seconds"] >= 1
 
@@ -346,8 +354,8 @@ def test_auth_enabled_me_and_ws_token(monkeypatch) -> None:
         with client.websocket_connect(
             f"/ws/prices?token={token_body['token']}"
         ) as websocket:
-            message = websocket.receive_json()
-        assert message["type"] == "ticker"
+            message = _ws_message_of_type(websocket, "ticker")
+        assert isinstance(message["tickers"], list)
 
         with pytest.raises(WebSocketDisconnect):
             with client.websocket_connect("/ws/prices?token=invalid") as websocket:

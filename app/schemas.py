@@ -85,6 +85,13 @@ class SignalItem(BaseModel):
     take_profit: float
     status: str
     reasons: list[str]
+    rr: float = 0.0
+    components: dict[str, float] = {}
+    reject_reason: str = ""
+    htf_trend: str = "neutral"
+    trend_timeframe: str = "4h"
+    structure_timeframe: str = "1h"
+    entry_timeframe: str = "15m"
 
 
 class SignalsResponse(BaseModel):

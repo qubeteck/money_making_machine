@@ -22,6 +22,11 @@ data/backups/
 logs/
 *.log
 
+# ui data
+node_modules/
+web/dist
+*.tsbuildinfo
+
 # OS / editors
 .DS_Store
 Thumbs.db

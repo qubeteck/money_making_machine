@@ -20,7 +20,8 @@ from sqlalchemy import text
 
 from app.config import BASE_DIR, get_settings
 from app.db import init_db, session_scope
-from app.routers import advanced_dashboard, api, auth, compat, dashboard, live, versioned_api
+from app.routers import advanced_dashboard, api, auth, compat, dashboard, live, ui_api, versioned_api
+from app.spa import router as spa_router
 from app.schemas import HealthResponse
 from app.security import RateLimiter, authenticate_bearer, client_key, validate_session, cleanup_expired_sessions
 from app.services.backup import backup_sqlite
@@ -357,16 +358,19 @@ def _apply_security_headers(response: Response, request: Request) -> Response:
     response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
     response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
     response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
-    if not request.url.path.startswith("/static/"):
+    if request.url.path.startswith("/ui/assets/"):
+        response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+    elif not request.url.path.startswith("/static/"):
         response.headers.setdefault("Cache-Control", "no-store")
     response.headers.setdefault(
         "Content-Security-Policy",
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://telegram.org; "
         "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
         "img-src 'self' data:; "
         "connect-src 'self' ws: wss:; "
         "font-src 'self' data:; "
+        "frame-src 'self' https://oauth.telegram.org https://telegram.org; "
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     )
     request_id = getattr(request.state, "request_id", "")
@@ -396,8 +400,10 @@ async def security_and_auth(request: Request, call_next):
     # Origin checks are scoped to API routes below; dashboard UI forms are
     # same-origin and protected by CSP form-action 'self'.
     path = request.url.path
-    is_static = path.startswith("/static/")
-    is_public = path in PUBLIC_PATHS or is_static
+    is_static = path.startswith("/static/") or path.startswith("/ui/assets/")
+    # The React shell is public; every API endpoint it calls is still protected.
+    is_spa = path == "/ui" or path.startswith("/ui/")
+    is_public = path in PUBLIC_PATHS or is_static or is_spa
 
     # CORS preflight must reach CORSMiddleware without Basic/Bearer auth.
     # Depending on middleware registration order, this handler may sit outside
@@ -438,16 +444,33 @@ async def security_and_auth(request: Request, call_next):
     # Clean up expired sessions periodically
     cleanup_expired_sessions()
 
-    # Public paths never require auth
-    public_paths = PUBLIC_PATHS | {"/auth/login", "/auth/register", "/auth/logout", "/docs", "/openapi.json"}
+    # Public paths never require auth. Token-minting and profile endpoints still
+    # need the normal credential checks, so they are explicitly excluded.
+    public_paths = PUBLIC_PATHS | {
+        "/auth/login",
+        "/auth/register",
+        "/auth/logout",
+        "/auth/providers",
+        "/auth/telegram/login",
+        "/auth/telegram/request-code",
+        "/auth/telegram/verify-code",
+        "/auth/telegram/widget",
+        "/auth/google",
+        "/auth/google/callback",
+        "/auth/token",
+        "/docs",
+        "/openapi.json",
+    }
 
-    if is_public or path in public_paths or path.startswith("/auth/") or path.startswith("/static/"):
+    if is_public or path in public_paths or path.startswith("/static/") or path.startswith("/ui/"):
         request.state.auth_method = "public"
         request.state.authenticated = False
     else:
-        # All dashboard/UI routes require authentication
-        authorized = False
-        method = "none"
+        # All dashboard/UI routes require authentication unless the operator
+        # deliberately left both DASHBOARD_PASSWORD and API_TOKEN empty.
+        auth_required = bool(env.dashboard_password or env.api_token)
+        authorized = not auth_required
+        method = "none" if auth_required else "anonymous"
         subject: str | None = None
         claims: dict | None = None
 
@@ -598,8 +621,10 @@ async def prometheus_metrics(request: Request):
 app.include_router(auth.router, prefix="/auth")
 app.include_router(compat.router)
 app.include_router(versioned_api.router)
+app.include_router(ui_api.router)
 app.include_router(advanced_dashboard.router)
 app.include_router(live.router)
 app.include_router(dashboard.router)
 app.include_router(api.router)
+app.include_router(spa_router)
 

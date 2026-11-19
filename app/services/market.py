@@ -459,7 +459,6 @@ class MarketDataCache:
         try:
             # Convert to string representation for comparison
             cached_str = str(cached)
-            new_str = str(new_data)
             current_hash = hash((cached_str, len(cached_str)))
             
             if current_hash != self.last_hash.get(key):

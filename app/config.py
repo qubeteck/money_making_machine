@@ -59,6 +59,16 @@ class Settings(BaseSettings):
     # Telegram. Create a bot with @BotFather, then send /id to your bot.
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
+    # Bot username (without @) for the Telegram Login Widget. It can usually be
+    # discovered from getMe at startup; set it explicitly when running offline.
+    telegram_bot_username: str = ""
+
+    # Google / Gmail OAuth login. Create a Web application OAuth client in the
+    # Google Cloud console and add <origin>/auth/google/callback as a redirect URI.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    # Optional explicit callback URL. Defaults to <current origin>/auth/google/callback.
+    google_redirect_uri: str = ""
 
     # MEXC. API key needs futures trading permission. NEVER enable withdrawals.
     mexc_api_key: str = ""

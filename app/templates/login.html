@@ -102,8 +102,20 @@
         },
         body: JSON.stringify({ username, password }),
         credentials: "same-origin",
+        // Don't follow redirects automatically - handle 303 explicitly
+        redirect: "manual",
       });
 
+      // Handle 303 redirect explicitly (server-side redirect after login)
+      if (response.status === 303) {
+        const location = response.headers.get("location");
+        if (location) {
+          window.location.href = location;
+          return;
+        }
+      }
+
+      // Handle normal JSON response (no redirect, or redirect not 303)
       const data = await response.json();
 
       if (data.ok) {

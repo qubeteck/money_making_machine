@@ -103,6 +103,7 @@ class TelegramService:
     def __init__(self) -> None:
         self.bot: Bot | None = None
         self.dp: Dispatcher | None = None
+        self.username: str = ""
         self._task: asyncio.Task | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._stopping = False
@@ -119,6 +120,15 @@ class TelegramService:
         )
         self.dp = Dispatcher()
         self._register_handlers(self.dp)
+        self.username = settings.telegram_bot_username.strip().lstrip("@")
+        if not self.username:
+            try:
+                me = await asyncio.wait_for(self.bot.get_me(), timeout=3.0)
+                self.username = (me.username or "").lstrip("@")
+            except Exception as exc:
+                logger.warning(
+                    "Could not discover Telegram bot username for the login widget: %s", exc
+                )
         self._loop = asyncio.get_running_loop()
         notifier.bind(self.bot, self._loop, self._chat_ids())
         self._task = asyncio.create_task(self._poll(), name="telegram-polling")

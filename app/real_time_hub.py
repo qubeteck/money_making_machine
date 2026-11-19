@@ -10,10 +10,9 @@ This module provides a unified infrastructure for real-time data distribution:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import time
-from collections import defaultdict, deque
+from collections import defaultdict
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set

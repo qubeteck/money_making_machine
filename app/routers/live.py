@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from datetime import datetime, timezone
@@ -11,7 +10,6 @@ from fastapi.responses import HTMLResponse
 
 from app.config import BASE_DIR, get_settings
 from app.security import authenticate_bearer, create_access_token
-from app.services.tickers import ticker_snapshot
 from app.real_time_hub import get_real_time_hub
 
 router = APIRouter(tags=["live"])
@@ -36,7 +34,9 @@ async def live_prices_page(request: Request) -> str:
                 or env.dashboard_username
                 or "dashboard"
             )
-            token = create_access_token(subject, secret, max(1, env.ws_token_expiry_minutes))
+            token = create_access_token(
+                subject, "ws", max(1, env.ws_token_expiry_minutes), env=env
+            )
     return html.replace("__EMBEDDED_WS_TOKEN__", token)
 
 
