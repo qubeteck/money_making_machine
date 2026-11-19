@@ -119,9 +119,23 @@ export interface LogEntry {
   message: string;
 }
 
+export interface DailyBacktestGate {
+  enabled: boolean;
+  ready: boolean;
+  running: boolean;
+  signature: string;
+  days: number;
+  symbols: string[];
+  checked_at: string;
+  completed_at: string | null;
+  last_error_at: string | null;
+  reason: string;
+}
+
 export interface DashboardData {
   status: DashboardStatus;
   settings: BotSettings;
+  daily_backtest?: DailyBacktestGate;
   equity: EquitySeries;
   positions: Position[];
   scans: Scan[];
@@ -255,6 +269,7 @@ export interface SystemInfo {
   ws_interval_seconds: number;
   risk_pct: number;
   symbols: string[];
+  daily_backtest?: DailyBacktestGate;
   jobs: JobRun[];
 }
 

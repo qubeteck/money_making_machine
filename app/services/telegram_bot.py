@@ -9,6 +9,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
     CallbackQuery,
+    FSInputFile,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
@@ -17,7 +18,7 @@ from aiogram.types import (
 )
 from sqlalchemy import select
 
-from app.config import get_settings
+from app.config import BASE_DIR, get_settings
 from app.db import session_scope
 from app.models import Signal
 from app.services.engine import get_engine
@@ -53,6 +54,12 @@ def _confirm_keyboard(yes_data: str, no_data: str, yes_text: str, no_text: str =
     )
 
 
+def _docs_url() -> str:
+    """Public URL of web/docs.html when PUBLIC_BASE_URL is configured."""
+    base = (get_settings().public_base_url or "").strip().rstrip("/")
+    return f"{base}/ui/docs.html" if base else ""
+
+
 # ------------------------------------------------------------------ menus
 
 MAIN_MENU = ReplyKeyboardMarkup(
@@ -78,7 +85,10 @@ MAIN_MENU = ReplyKeyboardMarkup(
             KeyboardButton(text="🔄 Mode"),
         ],
         [
+            KeyboardButton(text="📚 Docs"),
             KeyboardButton(text="ℹ️ Help"),
+        ],
+        [
             KeyboardButton(text="🆔 My ID"),
         ],
     ],
@@ -92,7 +102,8 @@ MENU_HINT = (
     "Use the menu buttons below, or send a command:\n"
     "<code>/status</code> • <code>/positions</code> • <code>/signals</code> • <code>/price BTC</code>\n"
     "<code>/pause</code> • <code>/resume</code> • <code>/kill</code> • <code>/risk 0.5</code>\n"
-    "<code>/report</code> • <code>/mode paper|live</code> • <code>/settings</code> • <code>/id</code>"
+    "<code>/report</code> • <code>/mode paper|live</code> • <code>/settings</code> • <code>/id</code>\n"
+    "<code>/docs</code> — systems documentation"
 )
 
 
@@ -216,6 +227,45 @@ class TelegramService:
         @dp.message(Command("id"))
         async def chat_id(message: Message) -> None:
             await message.answer(f"🆔 <b>Chat ID:</b> <code>{message.chat.id}</code>")
+
+        # ---- systems documentation ------------------------------------------
+        @dp.message(Command("docs"))
+        @dp.message(F.text == "📚 Docs")
+        async def docs(message: Message) -> None:
+            if not await self._guard(message):
+                return
+            url = _docs_url()
+            file_path = BASE_DIR / "web" / "docs.html"
+            keyboard = (
+                InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="📖 Open documentation", url=url
+                            )
+                        ]
+                    ]
+                )
+                if url
+                else None
+            )
+            if file_path.is_file():
+                await message.answer_document(
+                    FSInputFile(file_path),
+                    caption=(
+                        "📚 <b>Systems Documentation</b>\n\n"
+                        "Strategy, risk controls, backtest limits, and operations.\n"
+                        + (f"Web view: {url}" if url else "Attached as an HTML file.")
+                    ),
+                    reply_markup=keyboard,
+                )
+            elif url:
+                await message.answer(f"📚 <b>Systems Documentation</b>\n{url}", reply_markup=keyboard)
+            else:
+                await message.answer(
+                    "📚 Systems documentation is unavailable: web/docs.html is "
+                    "missing and PUBLIC_BASE_URL is not set."
+                )
 
         # ---- menu buttons (text) ---------------------------------------------
         @dp.message(F.text == "📊 Status")

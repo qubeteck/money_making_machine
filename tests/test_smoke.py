@@ -19,6 +19,8 @@ os.environ["API_TOKEN"] = ""
 os.environ["RATE_LIMIT_REQUESTS"] = "0"
 os.environ["TELEGRAM_BOT_TOKEN"] = ""
 os.environ["TELEGRAM_CHAT_ID"] = ""
+# Tests must not block scans behind the daily validation gate.
+os.environ["DAILY_BACKTEST_ENABLED"] = "false"
 
 from starlette.testclient import TestClient  # noqa: E402
 

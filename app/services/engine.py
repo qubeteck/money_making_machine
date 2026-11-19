@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -21,6 +22,7 @@ from app.services.analytics import (
     performance,
     snapshot_for_settings,
 )
+from app.services.daily_backtest import DailyBacktestGate
 from app.services.market import display_symbol, get_market
 from app.services.notify import notifier
 from app.services.risk import evaluate_trade
@@ -40,6 +42,7 @@ class TradingEngine:
         self._live_broker: MexcBroker | None = None
         self._live_broker_lock = threading.Lock()
         self._last_live_error = 0.0
+        self.daily_backtest = DailyBacktestGate()
 
     # ------------------------------------------------------------------ helpers
     def _log(self, db: Session, level: str, message: str, context: dict | None = None) -> None:
@@ -89,6 +92,12 @@ class TradingEngine:
             if not symbols:
                 return {"skipped": True, "reason": "no symbols configured"}
 
+            # Every configured pair must pass the daily historical validation
+            # before this scan may evaluate setups or place new trades. Open
+            # positions are still managed below while the gate is pending.
+            gate = self.daily_backtest_gate_status(db, settings)
+            gate_ready = bool(gate.get("ready"))
+
             if not settings.paper_mode:
                 try:
                     live_equity = self._broker_for(settings, allow_live_close=True).equity()
@@ -110,6 +119,9 @@ class TradingEngine:
                     prices[symbol] = price
 
                     closed += self._manage_symbol_positions(db, settings, symbol, price, latest_candle)
+
+                    if not gate_ready:
+                        continue
 
                     is_new = force or self._last_eval.get(symbol) != latest_candle.ts
                     if not is_new:
@@ -167,12 +179,18 @@ class TradingEngine:
                 self._log(db, "WARNING", f"Scan finished with {len(errors)} error(s) in {elapsed:.1f}s", {"errors": errors[:5]})
 
         return {
-            "skipped": False,
+            "skipped": not gate_ready,
+            "reason": (
+                f"Daily validation gate: {gate.get('reason')}"
+                if not gate_ready
+                else None
+            ),
             "evaluated": evaluated,
             "opened": opened,
             "closed": closed,
             "errors": errors,
             "seconds": round(elapsed, 2),
+            "backtest_gate": gate,
         }
 
     def _safe_price(self, symbol: str, fallback: float) -> float:
@@ -438,6 +456,15 @@ class TradingEngine:
             get_bot_settings(db).paused = paused
         notifier.send("Bot paused. Existing positions are still managed." if paused else "Bot resumed. Scanning for setups.")
 
+    def daily_backtest_gate_status(self, db: Session | None = None, settings: BotSetting | None = None) -> dict[str, Any]:
+        if db is not None:
+            return self.daily_backtest.status(db, settings)
+        with session_scope() as scoped:
+            return self.daily_backtest.status(scoped, settings)
+
+    def run_daily_backtests(self) -> dict[str, Any]:
+        return self.daily_backtest.run_if_needed()
+
     def status_text(self) -> str:
         with session_scope() as db:
             settings = get_bot_settings(db)
@@ -454,6 +481,18 @@ class TradingEngine:
                 f"Risk/trade: {settings.risk_pct:.2f}% | Leverage: {settings.leverage}x",
                 f"Last scan: {settings.last_scan_at.strftime('%H:%M:%S UTC') if settings.last_scan_at else 'never'}",
             ]
+            gate = self.daily_backtest_gate_status(db, settings)
+            gate_label = (
+                "READY"
+                if gate.get("ready")
+                else ("RUNNING" if gate.get("running") else "PENDING")
+            )
+            lines.append(
+                f"Daily validation: {gate_label} | {gate.get('days', 90)}d, "
+                f"{len(gate.get('symbols', []))} pairs"
+            )
+            if not gate.get("ready"):
+                lines.append(f"Gate: {gate.get('reason', 'pending')}")
             if positions:
                 lines.append("")
                 for trade in positions:

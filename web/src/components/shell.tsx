@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
   ArrowLeftRight,
+  BookOpen,
   ChevronDown,
   ExternalLink,
   FlaskConical,
@@ -33,6 +34,8 @@ interface NavItem {
   label: string;
   icon: typeof LayoutDashboard;
   end?: boolean;
+  /** Renders as a plain link instead of a client-side route. */
+  external?: boolean;
 }
 
 const workspaceNav: NavItem[] = [
@@ -50,6 +53,7 @@ const researchNav: NavItem[] = [
 const systemNav: NavItem[] = [
   { to: "/settings", label: "Settings", icon: Settings },
   { to: "/diagnostics", label: "Diagnostics", icon: Server },
+  { to: "/ui/docs.html", label: "Documentation", icon: BookOpen, external: true },
 ];
 
 const allNav = [...workspaceNav, ...researchNav, ...systemNav];
@@ -71,6 +75,31 @@ function NavSection({
       <nav className="space-y-1">
         {items.map((item) => {
           const Icon = item.icon;
+          const label = (
+            <>
+              <Icon className="h-4 w-4 shrink-0 text-slate-500 transition group-hover:text-slate-300" />
+              <span className="truncate">{item.label}</span>
+              {item.external ? (
+                <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-slate-600 transition group-hover:text-slate-400" />
+              ) : null}
+            </>
+          );
+
+          if (item.external) {
+            return (
+              <a
+                key={item.to}
+                href={item.to}
+                target="_blank"
+                rel="noreferrer"
+                onClick={onNavigate}
+                className="group flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.035] hover:text-slate-100"
+              >
+                {label}
+              </a>
+            );
+          }
+
           return (
             <NavLink
               key={item.to}
@@ -184,6 +213,31 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               <dt className="text-slate-600">Scan interval</dt>
               <dd className="num text-slate-300">
                 {system ? `${system.scan_interval_seconds}s` : "—"}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-slate-600">Daily backtest</dt>
+              <dd>
+                {system?.daily_backtest ? (
+                  <Badge
+                    tone={
+                      system.daily_backtest.ready
+                        ? "emerald"
+                        : system.daily_backtest.running
+                          ? "sky"
+                          : "amber"
+                    }
+                    dot
+                  >
+                    {system.daily_backtest.ready
+                      ? "Ready"
+                      : system.daily_backtest.running
+                        ? "Running"
+                        : "Pending"}
+                  </Badge>
+                ) : (
+                  <span className="text-slate-500">—</span>
+                )}
               </dd>
             </div>
             <div className="flex items-center justify-between gap-2">
@@ -460,7 +514,9 @@ export function AppShell() {
                 {system
                   ? system.paused
                     ? "Entries paused · positions still managed"
-                    : `Engine scanning every ${system.scan_interval_seconds}s`
+                    : system.daily_backtest && !system.daily_backtest.ready
+                      ? `Daily validation ${system.daily_backtest.running ? "running" : "pending"} · signals blocked`
+                      : `Engine scanning every ${system.scan_interval_seconds}s`
                   : "Connecting to engine"}
               </span>
             </div>

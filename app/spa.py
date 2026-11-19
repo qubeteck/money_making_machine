@@ -18,6 +18,11 @@ router = APIRouter(include_in_schema=False)
 DIST_DIR = BASE_DIR / "web" / "dist"
 INDEX_FILE = DIST_DIR / "index.html"
 
+# Standalone systems documentation page written in web/docs.html. It is served
+# publicly under /ui/docs.html so Telegram users can open it without signing in
+# to the dashboard.
+DOCS_FILE = BASE_DIR / "web" / "docs.html"
+
 _MISSING_BUILD = """<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Money Machine · UI build missing</title>
@@ -45,6 +50,18 @@ npm run build</pre>
 @router.get("/ui", include_in_schema=False)
 async def ui_root() -> RedirectResponse:
     return RedirectResponse(url="/ui/", status_code=307)
+
+
+@router.get("/ui/docs.html", include_in_schema=False)
+async def ui_docs() -> FileResponse | HTMLResponse:
+    """Serve the standalone systems documentation (no dashboard login required)."""
+    if not DOCS_FILE.exists():
+        return HTMLResponse(
+            "<!doctype html><meta charset='utf-8'><title>Documentation</title>"
+            "<p>Documentation file web/docs.html is missing.</p>",
+            status_code=404,
+        )
+    return FileResponse(DOCS_FILE, media_type="text/html; charset=utf-8")
 
 
 @router.get("/ui/{path:path}", include_in_schema=False)

@@ -100,6 +100,84 @@ async def _scan_job() -> None:
             logger.exception("Could not record scan job outcome")
 
 
+async def _daily_backtest_job() -> None:
+    """Run the daily all-pairs validation gate and persist its outcome.
+
+    On the first process start of each UTC day (and whenever the configured
+    pairs or trading settings change), every symbol is backtested for 90 days
+    before scans are allowed to evaluate setups or open new trades. Open
+    positions are still managed while this gate is pending.
+    """
+    started_at = datetime.now(timezone.utc)
+    started = time.perf_counter()
+    try:
+        result = await asyncio.to_thread(get_engine().run_daily_backtests)
+    except Exception as exc:
+        message = f"{type(exc).__name__}: {exc}"
+        logger.exception("Daily backtest validation failed")
+        try:
+            notifier.send(f"⚠️ Daily backtest validation failed\n{message}")
+        except Exception:
+            logger.exception("Could not send daily backtest failure alert")
+        try:
+            record_job_run(
+                "daily_backtest",
+                started_at,
+                "error",
+                message,
+                time.perf_counter() - started,
+            )
+        except Exception:
+            logger.exception("Could not record daily backtest outcome")
+        return
+
+    if not result.get("attempted"):
+        logger.debug("Daily backtest gate: %s", result.get("reason") or "already ready")
+        return
+
+    status = "success" if result.get("ready") else "error"
+    duration = time.perf_counter() - started
+    failures = result.get("failures") or []
+    message = result.get("message") or result.get("reason") or ""
+    try:
+        record_job_run("daily_backtest", started_at, status, message, duration)
+    except Exception:
+        logger.exception("Could not record daily backtest outcome")
+
+    days = result.get("days", 90)
+    pairs = result.get("symbols") or []
+    if status == "success":
+        logger.info(
+            "Daily backtest validation complete: %s pair(s), %s days, %.1fs",
+            len(pairs),
+            days,
+            duration,
+        )
+        try:
+            notifier.send(
+                f"✅ Daily backtest validation complete\n"
+                f"{len(pairs)} pair(s) × {days} days of history\n"
+                "Signal evaluation and new trades are unlocked."
+            )
+        except Exception:
+            logger.exception("Could not send daily backtest completion notice")
+    else:
+        logger.error(
+            "Daily backtest validation failed for %s pair(s): %s",
+            len(failures),
+            "; ".join(str(item) for item in failures[:5]),
+        )
+        try:
+            notifier.send(
+                "⚠️ Daily backtest validation incomplete\n"
+                f"{len(failures)} pair(s) failed coverage:\n"
+                + "\n".join(str(item) for item in failures[:8])
+                + "\nSignal evaluation stays blocked until all pairs pass."
+            )
+        except Exception:
+            logger.exception("Could not send daily backtest failure alert")
+
+
 async def _daily_report() -> None:
     started_at = datetime.now(timezone.utc)
     started = time.perf_counter()
@@ -276,6 +354,15 @@ async def lifespan(app: FastAPI):
 
     scheduler = AsyncIOScheduler(timezone="UTC")
     scheduler.add_job(
+        _daily_backtest_job,
+        "interval",
+        seconds=max(60, settings.daily_backtest_check_seconds),
+        id="daily_backtest",
+        max_instances=1,
+        coalesce=True,
+        next_run_time=datetime.now(timezone.utc),
+    )
+    scheduler.add_job(
         _scan_job,
         "interval",
         seconds=max(10, settings.scan_interval_seconds),
@@ -305,6 +392,15 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     app.state.scheduler = scheduler
     logger.info("Scheduler started (every %ss)", settings.scan_interval_seconds)
+    if settings.daily_backtest_enabled:
+        logger.info(
+            "Daily validation gate enabled: %s-day backtest for every pair, "
+            "checked every %ss (first run at startup)",
+            min(365, max(30, settings.daily_backtest_days)),
+            max(60, settings.daily_backtest_check_seconds),
+        )
+    else:
+        logger.warning("Daily validation gate disabled (DAILY_BACKTEST_ENABLED=false)")
     logger.info("Dashboard: http://%s:%s", settings.host, settings.port)
 
     try:
@@ -366,10 +462,10 @@ def _apply_security_headers(response: Response, request: Request) -> Response:
         "Content-Security-Policy",
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://telegram.org; "
-        "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+        "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; "
         "img-src 'self' data:; "
         "connect-src 'self' ws: wss:; "
-        "font-src 'self' data:; "
+        "font-src 'self' data: https://fonts.gstatic.com; "
         "frame-src 'self' https://oauth.telegram.org https://telegram.org; "
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     )

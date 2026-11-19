@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Money Machine — Systems Documentation</title>
+<meta name="description" content="Single-page systems documentation for the Money Machine trading platform.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Tailwind (play CDN, pinned). For production, compile with the Tailwind CLI instead; see the note at the bottom of this file. -->
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'media',
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ['"Bricolage Grotesque"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          sans: ['"Public Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        },
+        colors: {
+          paper:  'rgb(var(--paper) / <alpha-value>)',
+          panel:  'rgb(var(--panel) / <alpha-value>)',
+          ink:    'rgb(var(--ink) / <alpha-value>)',
+          muted:  'rgb(var(--muted) / <alpha-value>)',
+          line:   'rgb(var(--line) / <alpha-value>)',
+          brand:  'rgb(var(--brand) / <alpha-value>)',
+          warn:   'rgb(var(--warn) / <alpha-value>)',
+          bad:    'rgb(var(--bad) / <alpha-value>)',
+        },
+      },
+    },
+  };
+</script>
+
+<style type="text/tailwindcss">
+  :root {
+    --paper: 243 245 247; --panel: 255 255 255; --ink: 27 36 48; --muted: 94 108 124;
+    --line: 217 223 230; --brand: 14 107 98; --warn: 163 98 8; --bad: 168 50 50;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: 16 22 29; --panel: 24 32 41; --ink: 221 228 234; --muted: 143 158 173;
+      --line: 44 56 69; --brand: 79 209 191; --warn: 240 177 80; --bad: 240 120 120;
+    }
+  }
+  html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { @apply bg-paper text-ink font-sans antialiased; }
+
+  @layer components {
+    .doc h2 { @apply font-display text-3xl font-bold tracking-tight mt-16 mb-4 pt-8 border-t border-line; }
+    .doc h2:first-of-type { @apply mt-0 pt-0 border-0; }
+    .doc h3 { @apply font-display text-xl font-bold mt-10 mb-3; }
+    .doc h4 { @apply font-semibold mt-6 mb-2; }
+    .doc p  { @apply leading-7 my-3 max-w-[70ch]; }
+    .doc ul { @apply list-disc pl-6 my-3 space-y-1.5 max-w-[70ch] leading-7 marker:text-muted; }
+    .doc ol { @apply list-decimal pl-6 my-3 space-y-1.5 max-w-[70ch] leading-7 marker:text-muted; }
+    .doc li > ul, .doc li > ol { @apply my-1.5; }
+    .doc a  { @apply text-brand underline underline-offset-2 decoration-brand/40 hover:decoration-brand break-words; }
+    .doc code { @apply font-mono text-[0.85em] bg-line/60 rounded px-1.5 py-0.5 break-words; }
+    .doc pre { @apply font-mono text-[13px] leading-6 bg-panel border border-line rounded-lg p-4 my-4 overflow-x-auto; }
+    .doc pre code { @apply bg-transparent p-0 text-[inherit]; }
+    .doc .tablewrap { @apply my-4 overflow-x-auto rounded-lg border border-line bg-panel; }
+    .doc table { @apply w-full text-sm text-left border-collapse; }
+    .doc th { @apply font-semibold px-4 py-2.5 bg-line/40 border-b border-line whitespace-nowrap; }
+    .doc td { @apply px-4 py-2.5 border-b border-line align-top; }
+    .doc tr:last-child td { @apply border-b-0; }
+    .doc td.num, .doc th.num { @apply text-right tabular-nums; }
+    .badge { @apply inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap; }
+    .badge-ok   { @apply bg-brand/15 text-brand; }
+    .badge-warn { @apply bg-warn/15 text-warn; }
+    .badge-bad  { @apply bg-bad/15 text-bad; }
+    .callout { @apply my-5 rounded-lg border-l-4 px-5 py-4 bg-panel border border-line max-w-[75ch]; }
+    .callout p { @apply my-1; }
+    .callout-warn { @apply border-l-warn; }
+    .callout-brand { @apply border-l-brand; }
+    .callout-bad { @apply border-l-bad; }
+    .navlink { @apply block rounded-md px-3 py-1.5 text-sm text-muted hover:text-ink hover:bg-line/50; }
+    .navlink.active { @apply text-brand bg-brand/10 font-semibold; }
+    :focus-visible { @apply outline-2 outline-offset-2 outline-brand; }
+  }
+</style>
+</head>
+
+<body>
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded focus:bg-brand focus:px-3 focus:py-2 focus:text-paper">Skip to content</a>
+
+<div class="mx-auto max-w-7xl lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 px-4 sm:px-6">
+
+  <!-- Sidebar -->
+  <aside class="lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto py-6 lg:py-10">
+    <div class="mb-6">
+      <p class="font-display text-2xl font-bold tracking-tight">Money Machine</p>
+      <p class="text-sm text-muted mt-1">Systems documentation</p>
+    </div>
+    <details class="lg:hidden mb-4 rounded-lg border border-line bg-panel">
+      <summary class="cursor-pointer px-4 py-2.5 text-sm font-semibold">Jump to section</summary>
+      <nav class="px-2 pb-3" id="nav-mobile"></nav>
+    </details>
+    <nav class="hidden lg:block space-y-0.5" id="nav" aria-label="Sections"></nav>
+  </aside>
+
+  <!-- Content -->
+  <main id="main" class="doc py-6 lg:py-10 min-w-0">
+
+    <header class="mb-10">
+      <h1 class="font-display text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1] max-w-[18ch]">A trend-following trading platform, documented end to end</h1>
+      <p class="text-muted max-w-[60ch]">Self-hosted, single-process, MEXC USDT-margined perpetual futures. Paper trading by default.</p>
+      <dl class="mt-5 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+        <div><dt class="text-muted">Status</dt><dd class="font-medium">Current implementation reference</dd></div>
+        <div><dt class="text-muted">Last reviewed</dt><dd class="font-medium">2026-11-19</dd></div>
+        <div><dt class="text-muted">Repository</dt><dd class="font-medium"><a href="https://github.com/qubeteck/money_making_machine">qubeteck/money_making_machine</a></dd></div>
+      </dl>
+      <div class="callout callout-warn mt-6">
+        <p><strong>Risk warning.</strong> This document describes software and historical research, not investment advice. No strategy, calendar rule, indicator, or backtest can guarantee future profit. Scale a strategy only after costs, out-of-sample testing, paper trading, and a drawdown limit you can actually survive.</p>
+      </div>
+    </header>
+
+    <!-- 1 -->
+    <section id="summary">
+      <h2>Executive summary</h2>
+      <p>Money Machine has six responsibilities:</p>
+      <ul>
+        <li><strong>Trade:</strong> scan markets, grade setups, size positions, manage open trades.</li>
+        <li><strong>Protect:</strong> enforce per-trade risk, daily-loss, exposure, and cooldown limits.</li>
+        <li><strong>Record:</strong> keep an auditable SQLite journal of scans, signals, trades, equity, jobs, and logs.</li>
+        <li><strong>Control:</strong> expose a dashboard, JSON API, and Telegram command plane.</li>
+        <li><strong>Research:</strong> run an approximate historical backtest of the same strategy.</li>
+        <li><strong>Operate:</strong> schedule scans, back up the database, report health, and send alerts.</li>
+      </ul>
+      <p>The strategy is <strong>multi-timeframe trend continuation using Smart Money Concepts (SMC) and price action</strong>. It is not high-frequency trading, arbitrage, grid, martingale, or an AI/LLM decision engine.</p>
+      <h3>Key conclusions</h3>
+      <ul>
+        <li>The system has a coherent <em>trend + pullback + trigger</em> hypothesis.</li>
+        <li>Its own published sample backtest was <strong>negative after costs</strong>, so the edge is <strong>not proven</strong>.</li>
+        <li>The best next research step is <strong>regime and volatility filtering plus better exits</strong>, not a calendar-only “buy Monday / sell at month-end” rule.</li>
+        <li>Month-end and weekday effects exist in some historical crypto samples, but they are weak and unstable. Use them as risk and liquidity context, not as a standalone profit engine.</li>
+      </ul>
+    </section>
+
+    <!-- 2 -->
+    <section id="inventory">
+      <h2>System inventory</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>System</th><th>Purpose</th><th>Status</th><th>Main code</th></tr></thead>
+        <tbody>
+          <tr><td>Trading engine</td><td>Runs scans, manages positions, records results</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/services/engine.py</code></td></tr>
+          <tr><td>Confluence analyzer</td><td>Grades 4H/1H/15M setups</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/strategy/confluence.py</code></td></tr>
+          <tr><td>Market-structure library</td><td>Swings, BOS, CHoCH, order blocks, FVGs</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/strategy/structure.py</code></td></tr>
+          <tr><td>Indicators</td><td>EMA, ATR, volume SMA</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/strategy/indicators.py</code></td></tr>
+          <tr><td>Risk engine</td><td>Position sizing and account guardrails</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/services/risk.py</code></td></tr>
+          <tr><td>Paper broker</td><td>Simulated fills, fees, slippage</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/brokers/paper.py</code></td></tr>
+          <tr><td>MEXC live broker</td><td>ccxt futures order adapter</td><td><span class="badge badge-warn">Software-managed stops</span></td><td><code>app/brokers/mexc.py</code></td></tr>
+          <tr><td>Market data</td><td>MEXC OHLCV via ccxt with REST fallback</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/services/market.py</code></td></tr>
+          <tr><td>Scheduler and jobs</td><td>Scan, report, backup jobs and history</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/services/jobs.py</code>, <code>app/main.py</code></td></tr>
+          <tr><td>Journal and analytics</td><td>Trades, equity curve, win rate, drawdown</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/services/analytics.py</code></td></tr>
+          <tr><td>JSON API</td><td>Status, settings, jobs, metrics, dashboard data</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/routers/api.py</code>, <code>versioned_api.py</code>, <code>ui_api.py</code></td></tr>
+          <tr><td>React dashboard</td><td>SPA at <code>/ui</code></td><td><span class="badge badge-ok">Implemented</span></td><td><code>web/src/</code></td></tr>
+          <tr><td>Legacy dashboard</td><td>Jinja/HTMX UI at <code>/</code> and <code>/advanced</code></td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/templates/</code>, <code>app/routers/dashboard.py</code></td></tr>
+          <tr><td>Telegram control plane</td><td>Commands, alerts, daily report</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/services/telegram_bot.py</code></td></tr>
+          <tr><td>Authentication</td><td>Password/email, sessions, Telegram code and widget, Google OAuth</td><td><span class="badge badge-ok">Implemented</span> <span class="text-xs text-muted">social providers need configuration</span></td><td><code>app/routers/auth.py</code></td></tr>
+          <tr><td>Backtester</td><td>Approximate replay of the live rules</td><td><span class="badge badge-warn">Limited</span></td><td><code>app/strategy/backtest.py</code></td></tr>
+          <tr><td>Observability</td><td>Job history, metrics, Prometheus, logs</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/routers/versioned_api.py</code></td></tr>
+          <tr><td>Backups</td><td>Online SQLite backup with retention</td><td><span class="badge badge-ok">Implemented</span></td><td><code>app/services/backup.py</code></td></tr>
+          <tr><td>AI signal endpoint</td><td>LLM-generated signal API</td><td><span class="badge badge-warn">Placeholder (501)</span></td><td><code>app/routers/versioned_api.py</code></td></tr>
+          <tr><td>Calendar filter</td><td>Month-end / weekday trading rules</td><td><span class="badge badge-bad">Not implemented</span></td><td>Proposal in <a href="#calendar">Calendar</a></td></tr>
+          <tr><td>Exchange-side stops</td><td>Resting SL/TP on MEXC</td><td><span class="badge badge-bad">Not implemented</span></td><td>—</td></tr>
+          <tr><td>Funding / liquidation model</td><td>Accurate perp accounting in backtests</td><td><span class="badge badge-bad">Not implemented</span></td><td>—</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 3 -->
+    <section id="architecture">
+      <h2>Architecture and data flow</h2>
+      <pre><code>┌──────────────────────────────┐
+│ React SPA at /ui             │
+│ Overview · Command Center    │
+│ Trades · Signals · Live      │
+│ Backtest · Settings · Auth   │
+└──────────────┬───────────────┘
+               │ HTTPS / SSE / WebSocket
+┌──────────────▼───────────────┐        ┌────────────────────────────┐
+│ FastAPI application          │◄──────►│ Telegram bot (aiogram)     │
+│ · auth, API, dashboard       │        │ commands · alerts · report │
+│ · static/legacy UI           │        └────────────────────────────┘
+│ · SSE and WebSocket feeds    │
+└──────────────┬───────────────┘
+               │
+┌──────────────▼───────────────┐
+│ TradingEngine                │
+│ APScheduler scan loop        │
+│ confluence → risk → broker   │
+│ position monitor → journal   │
+└───────┬───────────────┬──────┘
+        │               │
+        ▼               ▼
+┌───────────────┐  ┌──────────────────┐
+│ MEXC market   │  │ Paper broker or  │
+│ data          │  │ MEXC live broker │
+│ ccxt + REST   │  │ orders/fills     │
+└───────────────┘  └──────────────────┘
+        │
+        ▼
+┌──────────────────────────────────────┐
+│ SQLite journal                       │
+│ settings · signals · trades · equity │
+│ snapshots · scan results · jobs/logs │
+└──────────────────────────────────────┘</code></pre>
+
+      <h3>Scan loop</h3>
+      <p>APScheduler triggers a scan every <code>SCAN_INTERVAL_SECONDS</code> (20 seconds by default). The scan runs in a worker thread so network calls never block the API or Telegram. For each configured symbol:</p>
+      <ol>
+        <li>Fetch the latest 15-minute candles.</li>
+        <li>Update every open position: stop-loss first, then take-profit, using current price plus the latest candle high/low. Never use a candle that started before the position opened.</li>
+        <li>If the 15-minute candle is new, or the scan was forced: fetch 4H and 1H candles, run the confluence analyzer, store a <code>ScanResult</code> with the blocker or score, and, if qualified, store a <code>Signal</code>, run risk checks, and open a trade.</li>
+        <li>Snapshot equity every five minutes.</li>
+        <li>Send Telegram notifications for entries, exits, rejections, and errors.</li>
+      </ol>
+      <h4>Duplicate protection</h4>
+      <ul>
+        <li>One signal per <code>(symbol, side, candle timestamp)</code>.</li>
+        <li>One open position per symbol, plus a global maximum.</li>
+        <li>An in-process scan lock prevents overlapping scans.</li>
+      </ul>
+    </section>
+
+    <!-- 4 -->
+    <section id="strategy">
+      <h2>Trading strategy</h2>
+      <h3>Classification</h3>
+      <p><strong>Multi-timeframe, trend-following continuation with SMC/price-action confluence and a fixed-R risk model.</strong> It combines a higher-timeframe EMA trend filter, market structure (BOS/CHoCH), order blocks and fair value gaps, a pullback entry, ATR-based stops, a 2R fixed target, and volume and momentum confirmation. It is not pure SMC, mean reversion, breakout-only, scalping, or market making.</p>
+
+      <h3>Decision pipeline</h3>
+      <p>Every item must be true before a trade is eligible.</p>
+      <ol>
+        <li><strong>4H trend filter.</strong> Bullish: EMA50 &gt; EMA200 and price &gt; EMA50. Bearish: the mirror. Mixed means no trade.</li>
+        <li><strong>1H structure filter.</strong> The latest confirmed 1H BOS/CHoCH must agree with the 4H direction and be no older than 30 bars. 1H EMA20/EMA50 must agree for the momentum score.</li>
+        <li><strong>1H zone context.</strong> Price must be within 2.0 ATR of an active, unmitigated 1H order block or FVG to earn the zone component.</li>
+        <li><strong>15M execution trigger.</strong> A fresh 15M BOS/CHoCH in the trend direction within 4 bars. Price must have pulled back into a 15M OB/FVG or the 15M EMA20, and must not be more than 2.8 ATR from the 15M EMA20. Volume should be at least 1.1× the 20-bar average for the volume component.</li>
+        <li><strong>Confluence threshold.</strong> Minimum score defaults to <strong>70/100</strong>. Lower setups are recorded as <code>below-threshold</code> and not executed.</li>
+        <li><strong>Risk and execution gates.</strong> Paused state, duplicate symbol, max positions, daily loss, loss streak, stop width, minimum notional, and leverage cap are checked. Live mode also needs wallet equity from MEXC, the environment master switch, and dashboard arming.</li>
+      </ol>
+
+      <h3>Confluence score</h3>
+      <div class="tablewrap max-w-md"><table>
+        <thead><tr><th>Component</th><th class="num">Points</th></tr></thead>
+        <tbody>
+          <tr><td>4H trend alignment</td><td class="num">25</td></tr>
+          <tr><td>1H EMA20/50 momentum</td><td class="num">10</td></tr>
+          <tr><td>1H structure aligned</td><td class="num">20</td></tr>
+          <tr><td>Price near a 1H zone</td><td class="num">15</td></tr>
+          <tr><td>Fresh 15M trigger</td><td class="num">15</td></tr>
+          <tr><td>Price near a 15M zone</td><td class="num">10</td></tr>
+          <tr><td>Volume confirmation</td><td class="num">5</td></tr>
+          <tr class="font-semibold"><td>Maximum</td><td class="num">100</td></tr>
+        </tbody>
+      </table></div>
+      <p>Hard filters (trend, structure age and alignment, trigger freshness, pullback, extension) must pass before scoring. The 15M trigger and pullback are mandatory and cannot be bought with points.</p>
+
+      <h3>Stop, target, and position size</h3>
+      <h4>Stop (long; short is mirrored)</h4>
+      <ul>
+        <li>Candidates: recent swing low, nearest active zone bottom, lowest low of the last six entry candles, and <code>entry − 0.8 ATR</code>.</li>
+        <li>The stop sits beyond the lowest candidate with a 0.35 ATR buffer.</li>
+        <li>If the distance exceeds 4 ATR, it is capped at 3 ATR. If it is tighter than 0.35 ATR, it is widened to 0.6 ATR.</li>
+      </ul>
+      <h4>Target</h4>
+      <p><code>entry ± 2R</code> by default, where R is the stop distance. The target is fixed: there is no trailing stop or partial exit in the current engine.</p>
+      <h4>Size</h4>
+<pre><code>risk_amount = equity × risk_pct
+qty         = risk_amount / stop_distance
+qty         = min(qty, remaining_notional_capacity / entry)
+notional    = qty × entry</code></pre>
+      <p>The notional cap is <code>equity × leverage × 0.95</code> minus existing open notional. Leverage is a notional cap, not a multiplier on the allowed loss.</p>
+
+      <h3>Risk and safety gates</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Gate</th><th>Default / current behavior</th></tr></thead>
+        <tbody>
+          <tr><td>Risk per trade</td><td>0.5% of equity; allowed 0.05–5%</td></tr>
+          <tr><td>Daily loss stop</td><td>2% of equity; allowed 0.1–20%</td></tr>
+          <tr><td>Max open positions</td><td>2 by default, 5 in the current local settings</td></tr>
+          <tr><td>One position per symbol</td><td>Yes</td></tr>
+          <tr><td>Leverage cap</td><td>3× default; allowed 1–50×</td></tr>
+          <tr><td>Stop width</td><td>Rejected if wider than 4% of entry price</td></tr>
+          <tr><td>Minimum notional</td><td>5 USDT</td></tr>
+          <tr><td>Loss-streak cooldown</td><td>3 consecutive losses → 6-hour pause on new entries</td></tr>
+          <tr><td>Live equity check</td><td>Refuses to size live orders if wallet equity is unavailable</td></tr>
+          <tr><td>Live arming</td><td><code>LIVE_TRADING_ALLOWED=true</code> <strong>and</strong> dashboard/Telegram arming</td></tr>
+          <tr><td>Kill switch</td><td>Closes all positions and pauses new entries</td></tr>
+          <tr><td>Pause</td><td>Stops new entries; existing positions remain managed</td></tr>
+        </tbody>
+      </table></div>
+      <p>The daily-loss gate uses realized PnL for the current UTC day. Open PnL is not included.</p>
+
+      <h3>Position lifecycle</h3>
+      <ol>
+        <li>Signal is written with status <code>new</code>.</li>
+        <li>Risk engine returns <code>allowed</code> or a rejection reason.</li>
+        <li>Paper or MEXC broker returns a fill.</li>
+        <li>Trade is stored as <code>open</code> with entry, stop, target, fees, leverage, and mode.</li>
+        <li>Every scan checks current price and the latest 15M high/low.</li>
+        <li>Exit reason is recorded: <code>stop-loss</code>, <code>take-profit</code>, or manual/kill-switch.</li>
+        <li>PnL, fees, and R multiple are stored, and Telegram is notified.</li>
+        <li>Equity is snapshotted.</li>
+      </ol>
+
+      <h3>Current local configuration</h3>
+      <p>Observed through the authenticated settings API on 2026-11-19. These are runtime database settings, not code constants; the local database is the source of truth. Code defaults live in <code>app/models.py</code>.</p>
+      <div class="tablewrap max-w-2xl"><table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Symbols</td><td>BTC/USDT, ETH/USDT, SOL/USDT, NAS100/USDT, XAU/USDT</td></tr>
+          <tr><td>Trend / structure / entry</td><td>4h / 1h / 15m</td></tr>
+          <tr><td>Risk per trade</td><td>0.5%</td></tr>
+          <tr><td>Daily loss stop</td><td>2.0%</td></tr>
+          <tr><td>Max open positions</td><td>5</td></tr>
+          <tr><td>Minimum confluence score</td><td>70</td></tr>
+          <tr><td>Leverage cap</td><td>3×</td></tr>
+          <tr><td>Paper starting balance</td><td>1,000 USDT</td></tr>
+          <tr><td>Taker fee / slippage</td><td>0.05% / 0.02%</td></tr>
+          <tr><td>Session filter</td><td>Off (07:00–21:00 UTC if enabled)</td></tr>
+          <tr><td>Execution mode</td><td>Paper</td></tr>
+          <tr><td>Engine state</td><td>Running</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>What the strategy is not</h3>
+      <ul>
+        <li>Not an AI/LLM system. <code>/api/v1/signals/ai</code> returns 501.</li>
+        <li>Not calendar-based. The engine does not know whether it is Monday, month-end, or the first trading day of the month.</li>
+        <li>Not a market maker, arbitrage, grid, or martingale system.</li>
+        <li>Not high-frequency. It evaluates closed 15-minute candles and polls every 20 seconds.</li>
+        <li>Not safe by default for large live size. Stops are monitored by the Python process, not resting on the exchange.</li>
+      </ul>
+    </section>
+
+    <!-- 5 -->
+    <section id="subsystems">
+      <h2>Subsystem reference</h2>
+
+      <h3>Market data and symbols</h3>
+      <ul>
+        <li>The <code>ccxt</code> MEXC adapter is the primary OHLCV source; a direct MEXC REST endpoint is the fallback.</li>
+        <li>A short cache avoids duplicate fetches within the scan interval.</li>
+        <li>Symbols are normalized to MEXC USDT-perpetual form internally; the UI shows shorter names such as <code>BTC/USDT</code>.</li>
+        <li>Configured symbols include crypto, a Nasdaq-100 proxy, and gold. The logic is identical for all, but liquidity, weekend behavior, and macro drivers differ.</li>
+      </ul>
+
+      <h3>React dashboard (<code>/ui</code>)</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Route</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>/ui/login</code></td><td>Password, registration, Telegram widget, Google/Gmail sign-in when configured</td></tr>
+          <tr><td><code>/ui/</code></td><td>Overview: equity, PnL, win rate, positions, scanner, risk, activity</td></tr>
+          <tr><td><code>/ui/command-center</code></td><td>SSE live dashboard, charts, markets, positions, signals, jobs</td></tr>
+          <tr><td><code>/ui/trades</code></td><td>Trade journal, filters, mobile cards</td></tr>
+          <tr><td><code>/ui/signals</code></td><td>Confluence detail, component scores, scan history</td></tr>
+          <tr><td><code>/ui/live</code></td><td>Live ticker and price view, WebSocket demo</td></tr>
+          <tr><td><code>/ui/backtest</code></td><td>Historical simulation and result inspection</td></tr>
+          <tr><td><code>/ui/settings</code></td><td>Runtime strategy, risk, session, and execution settings</td></tr>
+          <tr><td><code>/ui/diagnostics</code></td><td>Health, jobs, metrics, logs</td></tr>
+        </tbody>
+      </table></div>
+      <p>Built with React 19, Vite, Tailwind CSS v4, Recharts, and lightweight-charts. The production build lives in <code>web/dist</code> and is served by <code>app/spa.py</code>.</p>
+      <h4>Authentication</h4>
+      <ul>
+        <li>Password login and local registration with cookie-based same-origin sessions.</li>
+        <li>Telegram code login: request a code, receive it from the bot, enter it.</li>
+        <li>Telegram Login Widget: verifies Telegram’s HMAC signature and provisions an account on first use.</li>
+        <li>Google/Gmail OAuth: redirect flow with single-use state and a verified email. Hidden until <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> are set.</li>
+        <li>The Telegram widget needs the bot username and a domain registered with BotFather (<code>/setdomain</code>). On <code>127.0.0.1</code> Telegram may show “Bot domain invalid”; that is a provider restriction, not an app error.</li>
+      </ul>
+
+      <h3>Legacy dashboard</h3>
+      <p><code>/</code> serves the original Jinja/HTMX dashboard and <code>/advanced</code> the legacy Command Center (SSE and Chart.js). Both stay available while <code>/ui</code> is the primary interface.</p>
+
+      <h3>Telegram control plane</h3>
+      <p>Commands: <code>/status</code>, <code>/positions</code>, <code>/signals</code>, <code>/price</code>, <code>/pause</code>, <code>/resume</code>, <code>/kill</code>, <code>/risk</code>, <code>/report</code>, <code>/mode</code>, <code>/settings</code>. Alerts cover opens, closes, skipped signals, order failures, kill-switch actions, and a daily report. Only whitelisted chat IDs are accepted.</p>
+
+      <h3>Persistence and analytics</h3>
+      <p>SQLite stores users, runtime settings, signals and confluence components, scan results and blockers, trades with fees, PnL and R multiples, equity snapshots, and job runs and logs.</p>
+      <div class="callout callout-warn"><p>The database is designed for a single process. Session tokens are held in memory, so a restart signs every browser out. Do not run multiple uvicorn workers against the same SQLite file and scheduler.</p></div>
+
+      <h3>APIs and real-time feeds</h3>
+      <ul>
+        <li>REST: legacy <code>/api/*</code>, versioned <code>/api/v1/*</code>, and UI-friendly <code>/api/*</code> endpoints.</li>
+        <li>SSE: <code>/api/advanced/stream</code>.</li>
+        <li>WebSocket: <code>/ws/prices?token=…</code>, with a short-lived token from <code>/auth/ws-token</code>.</li>
+        <li><code>GET /health</code> is public; most other endpoints use cookie, Basic, or Bearer auth.</li>
+        <li>Rate limiting and security headers apply globally.</li>
+      </ul>
+
+      <h3>Backtesting</h3>
+      <p>The backtester replays the same 4H/1H/15M rules with these approximations:</p>
+      <ul>
+        <li>Enters at the next 15M open after a qualified signal.</li>
+        <li>Applies entry and exit slippage and fees.</li>
+        <li>Checks the stop before the target when both are touched in one candle.</li>
+        <li>Exits after 96 bars (24 hours) if neither level is hit.</li>
+        <li>One position at a time.</li>
+        <li>Ignores funding, liquidation, partial fills, queue position, and exchange outages.</li>
+      </ul>
+      <p>It is useful for rejecting bad ideas, not for proving a live edge.</p>
+
+      <h3>Operations, backup, and observability</h3>
+      <ul>
+        <li>APScheduler runs scans, the daily report, and the SQLite backup. Job runs keep retry counts and status history.</li>
+        <li><code>/metrics</code> exposes Prometheus text; <code>/api/v1/metrics</code> exposes operational counters.</li>
+        <li>Backups use the SQLite online backup API with a retention window.</li>
+        <li>Deploy as a Windows process, NSSM service, systemd unit, or Docker/Caddy. For live trading, use HTTPS, a strong password, and ideally a VPN or access proxy.</li>
+      </ul>
+    </section>
+
+    <!-- 6 -->
+    <section id="evidence">
+      <h2>Backtest evidence</h2>
+      <p>The README records a 90-day BTC/USDT run on 2026-11-11:</p>
+      <div class="tablewrap max-w-md"><table>
+        <thead><tr><th>Metric</th><th class="num">Result</th></tr></thead>
+        <tbody>
+          <tr><td>Trades</td><td class="num">89</td></tr>
+          <tr><td>Win rate</td><td class="num">34.8%</td></tr>
+          <tr><td>Net return</td><td class="num text-bad font-semibold">−9.96%</td></tr>
+          <tr><td>Profit factor</td><td class="num">0.69</td></tr>
+        </tbody>
+      </table></div>
+      <p>This is one sample, not a verdict, but it matters. A 2R system with a mid-30s win rate sits near break-even before costs, and time exits and real fees can push it negative. The strategy has not shown a durable live edge.</p>
+      <h4>Before increasing size, require</h4>
+      <ul>
+        <li>3–5 years of data across multiple regimes.</li>
+        <li>BTC, ETH, SOL, and the configured non-crypto proxies.</li>
+        <li>Walk-forward or out-of-sample windows.</li>
+        <li>Fees, slippage, funding, and conservative fill assumptions.</li>
+        <li>At least 100 closed trades in the final validation sample.</li>
+        <li>Stable expectancy across symbols and periods, not one lucky month.</li>
+      </ul>
+      <p>Profit factor alone is not enough. One outlier trade can produce a high profit factor alongside unacceptable drawdown or tail risk.</p>
+    </section>
+
+    <!-- 7 -->
+    <section id="calendar">
+      <h2>Calendar and seasonality</h2>
+      <h3>The key distinction</h3>
+      <p>A calendar date does not cause a price move. Calendar effects are proxies for real flows: salary and pension inflows, fund rebalancing, futures and options expiry, CME and equity market opens, ETF creation and redemption, perpetual funding timestamps, holidays, macro releases, and thinner weekend staffing. Crypto trades 24/7, so the equity plumbing behind month-end and weekday effects is weaker. The liquidity and volatility pattern is far more reliable than the direction of returns.</p>
+
+      <h3>Turn-of-month (TOM)</h3>
+      <p>Common windows: last trading day plus the first three of the next month <code>(−1, +3)</code>, or last two plus first two <code>(−2, +2)</code>.</p>
+      <ul>
+        <li>Some studies found positive TOM returns in BTC/ETH/LTC in samples ending around 2021.</li>
+        <li>A broad study of 22 calendar effects found few equity-style anomalies in crypto.</li>
+        <li>The effect has not been stable across later periods, definitions, and costs.</li>
+        <li>A 2026 practitioner replication found the BTC/ETH TOM premium concentrated before 2024 and negative in 2024–2026.</li>
+        <li>Even with positive TOM returns, a TOM-only strategy often fails to beat buy-and-hold after costs.</li>
+      </ul>
+      <div class="callout callout-brand"><p><strong>Verdict.</strong> An interesting hypothesis, not a proven standalone edge. Do not hard-code it into the trend system without a fresh out-of-sample test.</p></div>
+
+      <h3>Weekdays and weekends</h3>
+      <ul>
+        <li>Older BTC samples (about 2013–2017) showed a positive Monday effect; later research found it did not persist after 2015.</li>
+        <li>Other studies found no classical day-of-week effect in returns, but lower weekend volatility and higher early-week volatility.</li>
+        <li>Volume and liquidity are consistently lower on weekends and local nights.</li>
+        <li>Weekend return direction is too unstable for “buy Friday” or “sell Monday” rules.</li>
+      </ul>
+      <p><strong>For this system:</strong> do not use a fixed weekday direction. Use weekday and liquidity data for execution risk (wider spreads, thinner books, more slippage, gap risk). If you test a weekend filter, make it a new-entry pause or a risk reduction, not a long/short signal. For NAS100 and XAU, the underlying cash market is closed on weekends even though the MEXC perpetual trades, so treat weekend price action as a separate regime.</p>
+
+      <h3>Months of the year</h3>
+      <p>January effect, “sell in May,” September weakness, and quarter-end rebalancing are equity folklore. Crypto evidence is mixed and regime-dependent, and does not hold consistently across coins, periods, and costs. Do not build the core system around month-of-year seasonality; use macro and event awareness instead.</p>
+
+      <h3>Intraday sessions</h3>
+      <ul>
+        <li>Activity, volatility, and illiquidity rise into the London/New York overlap.</li>
+        <li>A large multi-exchange study found activity peaking around 16:00–17:00 UTC.</li>
+        <li>Returns and activity are typically below average roughly 01:00–05:00 UTC.</li>
+        <li>Bitcoin price discovery concentrates in London/New York overlapping hours.</li>
+      </ul>
+      <p>For a 15-minute strategy, thin books mean stops can be hit by noise and market orders can fill badly. The session filter is currently off; if enabled it uses UTC hours and supports overnight windows. The default 07:00–21:00 UTC is broad, not optimized.</p>
+      <p><strong>Recommended test:</strong> compare 24/7 behavior with a 12:00–18:00 UTC entry window and a weekday-only variant. Keep exits active 24/7. Do not assume the filter helps until out-of-sample expectancy improves after costs.</p>
+
+      <h3>Date-handling rules for this codebase</h3>
+      <ol>
+        <li><strong>Use UTC for crypto.</strong> All candles and scheduler timestamps are UTC.</li>
+        <li><strong>Define “month” explicitly.</strong> For crypto, month start is 00:00 UTC on day one. For an index, use the exchange calendar, holidays, and half-days.</li>
+        <li><strong>Do not mix calendar days and trading days.</strong> For 24/7 crypto, TOM <code>(−1, +3)</code> effectively means calendar days.</li>
+        <li><strong>Account for daylight saving.</strong> London and New York session boundaries shift against UTC; current session hours are fixed UTC.</li>
+        <li><strong>Record timezone and session</strong> on every signal and trade.</li>
+        <li><strong>Treat month-end funding and expiry separately</strong> from the date label.</li>
+        <li><strong>Use the underlying market calendar for NAS100/XAU.</strong></li>
+      </ol>
+
+      <h3>Recommended order of use</h3>
+      <ol>
+        <li>Execution and liquidity filter: avoid thin weekend and night entries; widen slippage assumptions there.</li>
+        <li>Risk overlay: reduce size around macro events, quarter-end, and expiry windows.</li>
+        <li>Diagnostics: tag every signal with weekday, day-of-month, TOM flag, session, and volatility regime.</li>
+        <li>Directional calendar edge, only after out-of-sample validation.</li>
+      </ol>
+      <p>Do not add a hard “long at month-end” rule to a trend-continuation system without testing it. A calendar long bias and a 4H/1H pullback trigger are different strategies, and mixing them can shrink the sample and hide the real edge.</p>
+
+      <h3>Calendar test plan</h3>
+      <ol>
+        <li>Add metadata to signals: <code>weekday</code>, <code>day_of_month</code>, <code>is_tom</code>, <code>session</code>, <code>atr_percentile</code>, <code>days_to_month_end</code>.</li>
+        <li>Backtest 3–5 years on every configured symbol.</li>
+        <li>Per bucket, compute trade count, win rate, average R, expectancy, profit factor, max drawdown, and average slippage.</li>
+        <li>Compare TOM windows with randomly placed four-day windows in the same months to control for trend and volatility clustering.</li>
+        <li>Use walk-forward splits and a permutation or bootstrap test.</li>
+        <li>Correct for multiple testing. Testing many weekdays, months, and windows guarantees false discoveries otherwise.</li>
+        <li>Promote a rule only if it is stable across symbols, eras, and cost assumptions. Otherwise keep it as a diagnostic or risk overlay.</li>
+      </ol>
+    </section>
+
+    <!-- 8 -->
+    <section id="roadmap">
+      <h2>Strategy roadmap</h2>
+      <h3>There is no universal most-profitable strategy</h3>
+      <p>Profitability depends on market and regime, holding period, costs and funding, liquidity and order size, leverage, drawdown tolerance, data and infrastructure, taxes, and reliability. A 70% win rate loses money if losses are larger than wins. A 35% win rate can be profitable with a real 2R payoff and controlled costs. A strong backtest can still fail live through overfitting, slippage, or regime change.</p>
+
+      <h3>Recommendation</h3>
+      <p><strong>Keep the trend-continuation architecture and improve regime, volatility, and exit logic before adding a new entry indicator.</strong> Priority order:</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Priority</th><th>Work</th><th>What to do</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Prove or reject the current edge</td><td>Run 3–5 years across BTC, ETH, SOL, NAS100, XAU with walk-forward windows and realistic funding and slippage. Report long and short separately. Do not change parameters before you have a baseline.</td></tr>
+          <tr><td>1</td><td>Higher-timeframe regime filter</td><td>Test daily price vs 1D EMA200, 1D EMA50/EMA200 alignment, 1D slope or 30-day return sign, realized-volatility percentile. A filter, not a new entry trigger.</td></tr>
+          <tr><td>2</td><td>Volatility targeting and exits</td><td>Size inversely to ATR; partial profit at 1R with a runner to 3R; ATR trail after +1R; time stop earlier than 96 bars; reduce size around macro events. The fixed 2R target may be leaving trend on the table, or it may be the only thing keeping expectancy positive. Test it.</td></tr>
+          <tr><td>3</td><td>Session and liquidity filter</td><td>Test 12:00–18:00 UTC entries and a weekday-only variant, with exits live 24/7. Most evidence-backed calendar-like change, because it affects fills, slippage, and stop noise.</td></tr>
+          <tr><td>4</td><td>Calendar overlay (optional)</td><td>Test TOM <code>(−2, +2)</code> or <code>(−1, +3)</code> only after the above, as a small risk overlay or separate low-frequency book.</td></tr>
+          <tr><td>5</td><td>Second, uncorrelated strategy</td><td>Only after the first is proven. Long-only time-series momentum with volatility scaling on liquid crypto, run as a separate book with its own risk budget. Mean reversion needs separate tail-risk controls.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>If you want one named strategy</h3>
+      <p>The most defensible research family for a retail crypto futures account is <strong>volatility-scaled, long-biased time-series momentum with a trend filter and strict risk control</strong>. It has broad cross-asset evidence, documented crypto results, historically stronger long-only than short-only performance, and volatility scaling limits the damage from any single high-volatility period. The evidence is not unanimous: some recent studies find raw crypto momentum insignificant after costs and after 2020. It is the best-supported family to test, not a promise.</p>
+
+      <h3>Acceptance criteria</h3>
+      <p>Keep a variant only if all of these hold:</p>
+      <ul>
+        <li>Net expectancy is positive after fees, slippage, funding, and conservative fills.</li>
+        <li>Profit factor is comfortably above 1.0 (target ≥ 1.3, not a guarantee).</li>
+        <li>Max drawdown stays inside the account’s survival limit.</li>
+        <li>Results hold in walk-forward and out-of-sample windows.</li>
+        <li>Results hold across at least three symbols or two regimes.</li>
+        <li>At least 100 closed trades.</li>
+        <li>The gain is not driven by one month, one trade, or one parameter value.</li>
+        <li>The logic is simple enough to explain and monitor.</li>
+        <li>The live vs paper difference is measured, not assumed.</li>
+      </ul>
+
+      <h3>What not to do</h3>
+      <div class="callout callout-bad">
+        <ul class="!my-0">
+          <li>Do not optimize the confluence threshold on the same data used to judge it.</li>
+          <li>Do not add many calendar filters and keep the best-looking combination.</li>
+          <li>Do not raise leverage to make a weak edge look profitable.</li>
+          <li>Do not use martingale, grid averaging, or “no stop” recovery logic.</li>
+          <li>Do not go live because a backtest shows a high win rate.</li>
+          <li>Do not assume a 24/7 crypto market has the same month-end flows as equities.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section id="operations">
+      <h2>Operations</h2>
+      <h3>Configuration layers</h3>
+      <ul>
+        <li><code>.env</code>: secrets, host/port, database URL, Telegram token, MEXC keys, live master switch, scheduler cadence, JWT secret, backup settings.</li>
+        <li>SQLite <code>bot_settings</code>: symbols, timeframes, risk, score threshold, leverage, session filter, execution mode, Telegram chat ID.</li>
+        <li>Dashboard and Telegram edit the database settings with no restart. Environment changes need a restart.</li>
+      </ul>
+
+      <h3>Safe operating sequence</h3>
+      <ol>
+        <li>Run in paper mode.</li>
+        <li>Confirm market data and scans.</li>
+        <li>Backtest across symbols and regimes.</li>
+        <li>Paper trade at least four weeks without changing rules.</li>
+        <li>Compare paper results with the backtest.</li>
+        <li>Go live only with the smallest MEXC size and <code>LIVE_TRADING_ALLOWED=true</code>.</li>
+        <li>Arm live mode. The bot starts paused.</li>
+        <li>Verify symbol, leverage, stop, and size before resuming.</li>
+        <li>Use a sub-account, isolated margin, one-way mode, and no withdrawal key.</li>
+        <li>Write down a stop-trading rule, for example −10% account drawdown.</li>
+      </ol>
+
+      <h3>Emergency actions</h3>
+      <ul>
+        <li><strong>Pause:</strong> stops new entries; existing positions remain managed.</li>
+        <li><strong>Kill switch:</strong> closes all positions and pauses.</li>
+        <li><strong>Process down:</strong> close positions manually on MEXC. The bot places no resting exchange-side stops.</li>
+        <li><strong>After an incident:</strong> reconcile the local journal against the exchange before resuming.</li>
+      </ul>
+
+      <h3>Backups</h3>
+<pre><code>python scripts/backup_db.py</code></pre>
+      <p>The scheduler also backs up daily when enabled and prunes old files by the configured retention period. Copy backups off the host.</p>
+    </section>
+
+    <!-- 10 -->
+    <section id="security">
+      <h2>Security and limitations</h2>
+      <h3>Controls present</h3>
+      <ul>
+        <li>bcrypt password hashing; cookie sessions; CSRF and origin protection on state-changing paths.</li>
+        <li>Rate limiting and security headers (CSP, frame denial, no-sniff).</li>
+        <li>JWT support for API and WebSocket clients; optional API bearer token.</li>
+        <li>Telegram chat-ID allowlist.</li>
+        <li>MEXC live mode requires two explicit switches.</li>
+        <li>Secrets live in <code>.env</code>, not the repository.</li>
+        <li>Google OAuth uses a single-use expiring state and a verified email.</li>
+        <li>Telegram widget uses HMAC verification with the bot token and a freshness window.</li>
+      </ul>
+      <h3>Important limitations</h3>
+      <ol>
+        <li><strong>Software stops.</strong> If the process, VPS, or network dies, no exchange stop is resting.</li>
+        <li><strong>Single process.</strong> In-memory sessions and SQLite assume one worker; more would break sessions, the scheduler, and the scan lock.</li>
+        <li><strong>No funding or liquidation model.</strong> Backtests and paper PnL ignore funding, liquidation, and margin calls.</li>
+        <li><strong>No partial-fill or queue modeling.</strong> Live market orders fill differently.</li>
+        <li><strong>No funding-rate or reconciliation loop.</strong> The local journal can drift from the exchange.</li>
+        <li><strong>No exchange-side trailing stop.</strong> Target is fixed at 2R; stop is structural.</li>
+        <li><strong>Session filter is fixed UTC.</strong> No daylight-saving adjustment.</li>
+        <li><strong>Approximate backtest.</strong> One position at a time, no portfolio capital competition, no margin engine.</li>
+        <li><strong>No AI strategy.</strong> The AI endpoint is a placeholder.</li>
+        <li><strong>Social login needs configuration.</strong> Missing config hides the button.</li>
+        <li><strong>Market-data dependency.</strong> ccxt or REST outages and rate limits can delay scans and stop checks.</li>
+        <li><strong>No guarantee.</strong> Past performance and calendar studies do not imply future returns.</li>
+      </ol>
+    </section>
+
+    <!-- 11 -->
+    <section id="testing">
+      <h2>Testing and verification</h2>
+      <h3>Project checks</h3>
+<pre><code>.\.venv\Scripts\python.exe -m compileall -q app
+.\.venv\Scripts\python.exe -m ruff check app tests scripts migrations
+.\.venv\Scripts\python.exe -m pytest -q
+cd web
+npm run build</code></pre>
+      <p>The React build runs <code>tsc -b &amp;&amp; vite build</code>.</p>
+      <h3>Recommended research checks</h3>
+      <ul>
+        <li><code>python scripts/strategy_smoke.py</code></li>
+        <li><code>python scripts/broker_smoke.py</code></li>
+        <li><code>python scripts/backtest_smoke.py</code></li>
+        <li>Authenticated API smoke checks with <code>TestClient</code> or a local uvicorn server.</li>
+        <li>Browser checks at desktop and 390 px mobile width.</li>
+        <li>Exact UI width test: <code>document.documentElement.scrollWidth === window.innerWidth</code></li>
+      </ul>
+    </section>
+
+    <!-- 12 -->
+    <section id="sourcemap">
+      <h2>Source map</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Concern</th><th>File</th></tr></thead>
+        <tbody>
+          <tr><td>App startup, scheduler, middleware</td><td><code>app/main.py</code></td></tr>
+          <tr><td>Environment settings</td><td><code>app/config.py</code></td></tr>
+          <tr><td>Database models</td><td><code>app/models.py</code></td></tr>
+          <tr><td>Strategy score and gates</td><td><code>app/strategy/confluence.py</code></td></tr>
+          <tr><td>BOS/CHoCH, OB, FVG</td><td><code>app/strategy/structure.py</code></td></tr>
+          <tr><td>Indicators</td><td><code>app/strategy/indicators.py</code></td></tr>
+          <tr><td>Backtest</td><td><code>app/strategy/backtest.py</code></td></tr>
+          <tr><td>Scan and execution lifecycle</td><td><code>app/services/engine.py</code></td></tr>
+          <tr><td>Risk rules</td><td><code>app/services/risk.py</code></td></tr>
+          <tr><td>Settings validation</td><td><code>app/services/settings.py</code></td></tr>
+          <tr><td>Market data</td><td><code>app/services/market.py</code></td></tr>
+          <tr><td>Paper broker</td><td><code>app/brokers/paper.py</code></td></tr>
+          <tr><td>MEXC broker</td><td><code>app/brokers/mexc.py</code></td></tr>
+          <tr><td>Telegram bot</td><td><code>app/services/telegram_bot.py</code></td></tr>
+          <tr><td>Auth and social login</td><td><code>app/routers/auth.py</code></td></tr>
+          <tr><td>React UI</td><td><code>web/src/</code></td></tr>
+          <tr><td>Legacy UI</td><td><code>app/templates/</code>, <code>app/static/</code></td></tr>
+          <tr><td>SPA serving</td><td><code>app/spa.py</code></td></tr>
+          <tr><td>Original strategy notes</td><td><code>docs/strategy-notes.md</code></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 13 -->
+    <section id="glossary">
+      <h2>Glossary</h2>
+      <dl class="max-w-[70ch] divide-y divide-line">
+        <div class="py-3"><dt class="font-semibold">ATR</dt><dd class="text-muted">Average True Range; a volatility measure.</dd></div>
+        <div class="py-3"><dt class="font-semibold">BOS</dt><dd class="text-muted">Break of Structure; a continuation break of a confirmed swing.</dd></div>
+        <div class="py-3"><dt class="font-semibold">CHoCH</dt><dd class="text-muted">Change of Character; the first structural break against the prior direction.</dd></div>
+        <div class="py-3"><dt class="font-semibold">FVG</dt><dd class="text-muted">Fair Value Gap; a three-candle price imbalance.</dd></div>
+        <div class="py-3"><dt class="font-semibold">OB</dt><dd class="text-muted">Order Block; the last opposing candle before a structural break.</dd></div>
+        <div class="py-3"><dt class="font-semibold">R</dt><dd class="text-muted">Initial stop distance; a 2R target is twice the stop distance.</dd></div>
+        <div class="py-3"><dt class="font-semibold">Expectancy</dt><dd class="text-muted">Average profit or loss per trade after costs.</dd></div>
+        <div class="py-3"><dt class="font-semibold">Profit factor</dt><dd class="text-muted">Gross profit ÷ gross loss.</dd></div>
+        <div class="py-3"><dt class="font-semibold">TOM</dt><dd class="text-muted">Turn of the month.</dd></div>
+        <div class="py-3"><dt class="font-semibold">TSMOM</dt><dd class="text-muted">Time-series momentum; an asset’s own trailing return used as the signal.</dd></div>
+        <div class="py-3"><dt class="font-semibold">Walk-forward</dt><dd class="text-muted">Repeatedly optimizing on an in-sample window and testing on the next unseen window.</dd></div>
+        <div class="py-3"><dt class="font-semibold">Out-of-sample</dt><dd class="text-muted">Data not used to choose the rules or parameters.</dd></div>
+      </dl>
+    </section>
+
+    <!-- 14 -->
+    <section id="references">
+      <h2>References</h2>
+      <h3>Calendar and seasonality</h3>
+      <ol>
+        <li>Qadan, Aharon &amp; Eichel (2022), “Seasonal and Calendar Effects and the Price Efficiency of Cryptocurrencies,” <em>Finance Research Letters</em>. <a href="https://www.sciencedirect.com/science/article/abs/pii/S1544612321003597">Link</a></li>
+        <li>Mueller (2024), “Revisiting seasonality in cryptocurrencies,” <em>Finance Research Letters</em>. <a href="https://ideas.repec.org/a/eee/finlet/v64y2024ics1544612324004598.html">Link</a></li>
+        <li>Baur, Cahill, Godfrey &amp; Liu (2019), “Bitcoin time-of-day, day-of-week and month-of-year effects in returns and trading volume,” <em>Finance Research Letters</em>. <a href="https://ideas.repec.org/a/eee/finlet/v31y2019icp78-92.html">Link</a></li>
+        <li>Caporale &amp; Plastun, “The day of the week effect in the cryptocurrency market.” <a href="https://bura.brunel.ac.uk/bitstream/2438/17208/3/FullText.pdf">Link</a></li>
+        <li>Kumar (2022), “Turn-of-the-month effect in cryptocurrencies,” <em>Managerial Finance</em>. <a href="https://www.emerald.com/mf/article-abstract/48/5/821/290148/Turn-of-the-month-effect-in-cryptocurrencies">Link</a></li>
+        <li>Vasileiou (2023), “Is the turn of the month an anomaly on which an investment strategy could be based? Evidence from Bitcoin and Ethereum,” <em>Int. J. of Banking, Accounting and Finance</em>. <a href="https://www.inderscienceonline.com/doi/pdf/10.1504/IJBAAF.2023.129336">Link</a></li>
+        <li>Kinateder &amp; Papavassiliou (2021), “Calendar effects in Bitcoin returns and volatility,” <em>Finance Research Letters</em>. <a href="https://ideas.repec.org/a/eee/finlet/v38y2021ics1544612319311316.html">Link</a></li>
+        <li>“The crypto world trades at tea time: intraday evidence from centralized exchanges across the globe,” <em>Review of Quantitative Finance and Accounting</em> (2024). <a href="https://link.springer.com/article/10.1007/s11156-024-01304-1">Link</a></li>
+        <li>Su, Wang &amp; Yuan (2022), “The intraday dynamics and intraday price discovery of bitcoin,” <em>Research in International Business and Finance</em>. <a href="https://ideas.repec.org/a/eee/riibaf/v60y2022ics0275531922000137.html">Link</a></li>
+        <li>Practitioner TOM replication (2026), “Does the turn-of-the-month effect work in bitcoin?” <a href="https://maza.trade/research/turn-of-the-month-bitcoin/">Link</a></li>
+      </ol>
+      <h3>Trend and momentum</h3>
+      <ol start="11">
+        <li>Han, Kang &amp; Ryu, “Time-Series and Cross-Sectional Momentum in the Cryptocurrency Market: A Comprehensive Analysis under Realistic Assumptions.” <a href="https://acfr.aut.ac.nz/__data/assets/pdf_file/0009/918729/Time_Series_and_Cross_Sectional_Momentum_in_the_Cryptocurrency_Market_with_IA.pdf">Link</a></li>
+        <li>Huang, Sangiorgi &amp; Urquhart (2024), “Cryptocurrency Volume-Weighted Time Series Momentum.” <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4825389">Link</a></li>
+        <li>“A Decade of Evidence of Trend Following Investing in Cryptocurrencies” (2020). <a href="https://arxiv.org/abs/2009.12155">Link</a></li>
+      </ol>
+      <p class="text-sm text-muted">References are research context, not proof that any rule will remain profitable. Samples, costs, and market regimes differ.</p>
+    </section>
+
+    <footer class="mt-16 pt-6 border-t border-line text-sm text-muted">
+      Money Machine · Systems documentation · Reviewed 2026-11-19
+    </footer>
+  </main>
+</div>
+
+<script>
+  // Build sidebar navigation from the section headings and highlight the current one.
+  (function () {
+    var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+    var targets = [document.getElementById('nav'), document.getElementById('nav-mobile')];
+    targets.forEach(function (nav) {
+      sections.forEach(function (s) {
+        var a = document.createElement('a');
+        a.href = '#' + s.id;
+        a.className = 'navlink';
+        a.textContent = s.querySelector('h2').textContent;
+        nav.appendChild(a);
+      });
+    });
+    var links = Array.prototype.slice.call(document.querySelectorAll('.navlink'));
+    if (!('IntersectionObserver' in window)) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (l) {
+          l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id);
+        });
+      });
+    }, { rootMargin: '-10% 0px -75% 0px' });
+    sections.forEach(function (s) { io.observe(s); });
+  })();
+</script>
+
+<!--
+  Using this file in your own system
+  ----------------------------------
+  This page loads Tailwind from the pinned play CDN above, which is fine for internal docs.
+  To ship a compiled stylesheet instead:
+    1. npm i -D tailwindcss@3.4.17
+    2. Move the tailwind.config object into tailwind.config.js (add content: ['./money-machine-docs.html']).
+    3. Move the <style type="text/tailwindcss"> block into input.css, preceded by
+       @tailwind base; @tailwind components; @tailwind utilities;
+    4. npx tailwindcss -i input.css -o docs.css --minify
+    5. Replace the CDN <script> tags with <link rel="stylesheet" href="docs.css">.
+-->
+</body>
+</html>

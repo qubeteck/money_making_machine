@@ -189,6 +189,7 @@ async def dashboard() -> dict:
                 "entry_timeframe": settings.entry_timeframe,
             },
             "settings": _settings_payload(settings),
+            "daily_backtest": get_engine().daily_backtest_gate_status(db, settings),
             "equity": {
                 "labels": [row.created_at.strftime("%m-%d %H:%M") for row in equity_rows],
                 "values": [round(row.equity, 2) for row in equity_rows],
@@ -407,6 +408,7 @@ async def system(request: Request) -> dict:
             "ws_interval_seconds": env.ws_interval_seconds,
             "risk_pct": settings.risk_pct,
             "symbols": [display_symbol(symbol) for symbol in parse_symbols(settings.symbols)],
+            "daily_backtest": get_engine().daily_backtest_gate_status(db, settings),
             "jobs": [
                 {
                     "id": row.id,

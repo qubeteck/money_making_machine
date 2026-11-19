@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     # Bot username (without @) for the Telegram Login Widget. It can usually be
     # discovered from getMe at startup; set it explicitly when running offline.
     telegram_bot_username: str = ""
+    # Public origin used to build dashboard documentation links shared from Telegram,
+    # e.g. https://money-machine.example.com. Leave empty to send the documentation
+    # HTML file as a document instead.
+    public_base_url: str = ""
 
     # Google / Gmail OAuth login. Create a Web application OAuth client in the
     # Google Cloud console and add <origin>/auth/google/callback as a redirect URI.
@@ -99,6 +103,16 @@ class Settings(BaseSettings):
 
     scan_interval_seconds: int = 20
     market_cache_seconds: int = 15
+
+    # Daily pre-signal validation gate. On the first process start of each UTC day,
+    # every configured pair is backtested before scans may evaluate setups or place
+    # new trades. Open positions are still managed while the gate is pending.
+    daily_backtest_enabled: bool = True
+    daily_backtest_days: int = 90
+    # How often the scheduler checks whether the daily gate is ready. The first
+    # check runs immediately at startup; failed validations retry after this delay.
+    daily_backtest_check_seconds: int = 300
+    daily_backtest_retry_minutes: int = 30
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
