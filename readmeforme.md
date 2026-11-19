@@ -47,3 +47,11 @@ Login and branding status
 - Branding, favicons, Apple touch icon, and web manifest are wired into the React app.
 Live Google login still needs real GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET and the callback URL registered in Google Cloud. The Telegram widget needs the deployment domain registered with BotFather via /setdomain; it will show “Bot domain invalid” on 127.0.0.1.
 Checks passed: production build, Ruff, 23 tests, and full desktop/mobile Playwright QA with no console errors or document overflow. The mocked Google button was verified at mobile width.
+
+
+
+
+
+
+
+is it my systems current strategy is the best or please update my current Systems Strategy to "Regime-adaptive, volatility-scaled trend continuation with better exits"
