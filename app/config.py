@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     trust_proxy_headers: bool = False
 
     # Comma-separated browser origins allowed to call the API (e.g. a separate frontend).
-    cors_origins: str = ""
+    cors_origins: str = "https://ids.diredawa.et/tradingbot"
 
     # Server-Sent Events cadence for the live command center.
     sse_interval_seconds: int = 5

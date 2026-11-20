@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
-  const BACKEND = env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
+  const BACKEND = env.VITE_BACKEND_URL || "https://ids.diredawa.et/tradingbot/api";
 
   return {
     base: "/ui/",
@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
       host: "127.0.0.1",
       port: 5173,
       strictPort: true,
+      allowedHosts: ["ids.diredawa.et"],
       proxy: {
         "/api": { target: BACKEND, changeOrigin: false },
         "/auth": { target: BACKEND, changeOrigin: false },

@@ -52,8 +52,8 @@ async def ui_root() -> RedirectResponse:
     return RedirectResponse(url="/ui/", status_code=307)
 
 
-@router.get("/ui/docs.html", include_in_schema=False)
-async def ui_docs() -> FileResponse | HTMLResponse:
+@router.get("/ui/docs.html", include_in_schema=False, response_model=None)
+async def ui_docs():
     """Serve the standalone systems documentation (no dashboard login required)."""
     if not DOCS_FILE.exists():
         return HTMLResponse(
